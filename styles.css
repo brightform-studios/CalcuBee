@@ -16,6 +16,23 @@
     padding: 0;
 }
 
+.site-header {
+    width: 100%;
+    height: 52px;
+    flex-shrink: 0;
+    background: var(--accent);
+    border-bottom: 2px solid var(--accent-strong);
+}
+
+.site-footer {
+    width: 100%;
+    height: 52px;
+    flex-shrink: 0;
+    background: var(--accent);
+    border-top: 2px solid var(--accent-strong);
+    margin-top: auto;
+}
+
 body {
     min-height: 100dvh;
     font-family: "Space Grotesk", sans-serif;
@@ -24,10 +41,9 @@ body {
         radial-gradient(circle at 15% 10%, rgba(255, 255, 255, 0.45) 0%, transparent 32%),
         radial-gradient(circle at 85% 20%, rgba(246, 176, 0, 0.32) 0%, transparent 34%),
         linear-gradient(140deg, var(--bg-1), var(--bg-2));
-    display: grid;
-    align-items: start;
-    justify-items: center;
-    padding: clamp(0.6rem, 1.8vw, 1.2rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     overflow-x: hidden;
 }
 
@@ -71,6 +87,8 @@ body {
 
 .shell {
     width: min(1700px, 100%);
+    padding: clamp(0.6rem, 1.8vw, 1.2rem);
+    margin-block: auto;
     display: grid;
     grid-template-columns: minmax(240px, 300px) minmax(0, 680px) minmax(480px, 1fr);
     grid-template-areas: "history center board";
