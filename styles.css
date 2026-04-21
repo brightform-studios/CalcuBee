@@ -1,3 +1,11 @@
+h2.recent-calculations+p {
+    font-size: 0.9rem;
+}
+
+h2.recent-calculations {
+    font-size: 1.5rem;
+}
+
 :root {
     --bg-1: #fff4d6;
     --bg-2: #f7df82;
@@ -8,12 +16,14 @@
     --accent-strong: #df9300;
     --line: rgba(29, 27, 22, 0.14);
     --ok: #1f7a2f;
+    --sticky-size: 182px;
 }
 
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 .site-header {
@@ -35,12 +45,9 @@
 
 body {
     min-height: 100dvh;
-    font-family: "Space Grotesk", sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
     color: var(--ink);
-    background:
-        radial-gradient(circle at 15% 10%, rgba(255, 255, 255, 0.45) 0%, transparent 32%),
-        radial-gradient(circle at 85% 20%, rgba(246, 176, 0, 0.32) 0%, transparent 34%),
-        linear-gradient(140deg, var(--bg-1), var(--bg-2));
+    background: #fff6bf;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -48,6 +55,7 @@ body {
 }
 
 .halo {
+    display: none;
     position: fixed;
     border-radius: 999px;
     filter: blur(34px);
@@ -121,7 +129,6 @@ body {
     backdrop-filter: blur(10px);
     border: 1px solid var(--line);
     border-radius: 22px;
-    box-shadow: 0 16px 36px rgba(82, 64, 17, 0.18);
 }
 
 .calculator {
@@ -139,16 +146,33 @@ body {
     margin-bottom: 0.8rem;
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-weight: bold;
+}
+
 h1 {
-    font-family: "Fraunces", serif;
-    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-size: clamp(1.5rem, 3vw, 1.8rem);
     letter-spacing: 0.4px;
+}
+
+/* Unified subtext color for consistency */
+.tag,
+p,
+small,
+.muted,
+.subtext {
+    color: var(--muted) !important;
 }
 
 .tag {
     font-size: 0.76rem;
     font-weight: 700;
-    color: var(--accent-strong);
     letter-spacing: 0.1em;
     text-transform: uppercase;
 }
@@ -166,7 +190,7 @@ h1 {
     border: 0;
     background: transparent;
     color: var(--ink);
-    font-size: clamp(1rem, 2.6vw, 1.25rem);
+    font-size: clamp(1rem, 2.6vw, 1.1rem);
     font-family: inherit;
     outline: none;
     margin-bottom: 0.35rem;
@@ -177,7 +201,6 @@ h1 {
     min-height: 1.7rem;
     font-size: clamp(1rem, 3vw, 1.35rem);
     font-weight: 700;
-    color: var(--ok);
     word-break: break-word;
 }
 
@@ -204,7 +227,6 @@ button {
 
 button:hover {
     transform: translateY(-1px);
-    background: #fff;
 }
 
 button:active {
@@ -242,41 +264,161 @@ button:active {
 }
 
 .notes-space {
+    position: relative;
     min-height: 250px;
     display: grid;
     align-content: start;
     gap: 0.45rem;
     padding: 1rem;
+    padding-bottom: calc(var(--sticky-size) + 3rem);
+    overflow: visible;
 }
 
 .notes-space h2 {
-    font-family: "Fraunces", serif;
-    font-size: 1.1rem;
+    font-size: 1.5rem;
+}
+
+.notes-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.add-sticky-btn {
+    width: 40px;
+    min-height: 40px;
+    height: 40px;
+    border-radius: 999px;
+    font-size: 1.35rem;
+    line-height: 1;
+    font-weight: 700;
+    background: #ffe287;
+    border: 1px solid rgba(29, 27, 22, 0.2);
+}
+
+.notes-slots {
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    bottom: -3.5rem;
+    display: grid;
+    grid-template-columns: repeat(3, var(--sticky-size));
+    justify-content: center;
+    gap: 0.4rem;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.note-slot {
+    width: var(--sticky-size);
+    height: var(--sticky-size);
+    border-radius: 16px;
+    border: 2px dashed rgba(74, 64, 36, 0.24);
+    background: linear-gradient(145deg, rgba(255, 241, 182, 0.45), rgba(255, 231, 145, 0.28));
+}
+
+.sticky-layer {
+    position: fixed;
+    inset: 0;
+    overflow: visible;
+    z-index: 2000;
+    pointer-events: none;
+}
+
+.sticky-note {
+    position: absolute;
+    width: var(--sticky-size);
+    height: var(--sticky-size);
+    background: #ffe084;
+    border: 1px solid rgba(106, 79, 10, 0.25);
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    touch-action: none;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.sticky-note.pop-in {
+    animation: sticky-pop 0.24s ease-out;
+}
+
+@keyframes sticky-pop {
+    from {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.62);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.sticky-note.dragging {
+    cursor: move;
+}
+
+.sticky-remove {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    min-height: 20px;
+    width: 20px;
+    height: 20px;
+    border: 0;
+    background: transparent;
+    color: #6a4b09;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    z-index: 2;
+}
+
+.sticky-note.color-yellow {
+    background: #ffe17b;
+}
+
+.sticky-drag-zone {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2rem;
+    cursor: pointer;
+}
+
+/* Match sticky note font to site */
+.sticky-input {
+    flex: 1;
+    border: 0;
+    resize: none;
+    padding: 2.3rem 0.68rem 0.68rem;
+    font: 600 0.9rem/1.4 Arial, Helvetica, sans-serif;
+    color: #000000;
+    background: transparent;
+    outline: none;
 }
 
 .notes-space p {
     color: var(--muted);
     font-size: 0.9rem;
-}
-
-.history-panel h2 {
-    font-family: "Fraunces", serif;
-    font-size: 1.2rem;
-}
-
-.history-panel p {
-    color: var(--muted);
-    font-size: 0.9rem;
+    max-width: 52ch;
 }
 
 .board h2 {
     font-family: "Fraunces", serif;
-    font-size: 1.2rem;
+    font-size: 1.5rem;
 }
 
 .board p {
     color: var(--muted);
-    font-size: 0.92rem;
+    font-size: 0.9rem;
 }
 
 .tools {
@@ -306,7 +448,42 @@ button:active {
 
 .tools input[type="range"] {
     width: 100px;
-    accent-color: var(--accent-strong);
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+}
+
+.tools input[type="range"]::-webkit-slider-runnable-track {
+    height: 8px;
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+}
+
+.tools input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -5px;
+    border-radius: 999px;
+    border: 1px solid rgba(106, 79, 10, 0.35);
+    background: var(--accent-strong);
+}
+
+.tools input[type="range"]::-moz-range-track {
+    height: 8px;
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+}
+
+.tools input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(106, 79, 10, 0.35);
+    background: var(--accent-strong);
 }
 
 .tool-btn {
@@ -401,6 +578,7 @@ button:active {
 
     .notes-space {
         min-height: 220px;
+        padding-bottom: calc(var(--sticky-size) + 2.2rem);
     }
 
     .history-list {
@@ -431,6 +609,10 @@ button:active {
 }
 
 @media (max-width: 640px) {
+    :root {
+        --sticky-size: 142px;
+    }
+
 
     .panel,
     .board-wrap {
@@ -464,5 +646,15 @@ button:active {
 
     .whiteboard {
         min-height: 240px;
+    }
+
+    .notes-slots {
+        bottom: -3rem;
+        gap: 0.3rem;
+    }
+
+    .note-slot,
+    .sticky-note {
+        height: var(--sticky-size);
     }
 }

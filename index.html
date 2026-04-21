@@ -18,29 +18,24 @@
 <body>
     <div class="halo one" aria-hidden="true"></div>
     <div class="halo two" aria-hidden="true"></div>
-
     <header class="site-header" aria-label="Site header"></header>
-
     <main class="shell" aria-label="Calculator app">
         <aside class="history-panel panel">
-            <h2>Recent Calculations</h2>
+            <h2 class="recent-calculations">Recent Calculations</h2>
             <p>Your latest results stay here while you keep working.</p>
             <ul id="historyList" class="history-list" aria-label="Recent calculations"></ul>
         </aside>
-
         <section class="center-column" aria-label="Calculator and sticky notes">
             <section class="calculator panel" aria-labelledby="title">
                 <div class="headline">
                     <h1 id="title">CalcuBee</h1>
                     <span class="tag">Advanced</span>
                 </div>
-
                 <div class="display">
                     <input id="expression" class="expression" type="text" inputmode="text"
                         placeholder="Type expression, for example sin(pi/4)^2 + 7!" aria-label="Expression input">
                     <div id="result" class="result" aria-live="polite">0</div>
                 </div>
-
                 <div class="grid" id="keys">
                     <button class="op" data-action="clear">AC</button>
                     <button class="op" data-action="delete">DEL</button>
@@ -48,34 +43,29 @@
                     <button class="op" data-value=")">)</button>
                     <button class="op" data-value="%">%</button>
                     <button class="major" data-action="evaluate">=</button>
-
                     <button data-value="7">7</button>
                     <button data-value="8">8</button>
                     <button data-value="9">9</button>
                     <button class="op" data-value="/">/</button>
                     <button class="op" data-value="sqrt(">sqrt</button>
                     <button class="op" data-value="^">x^y</button>
-
                     <button data-value="4">4</button>
                     <button data-value="5">5</button>
                     <button data-value="6">6</button>
                     <button class="op" data-value="*">*</button>
                     <button class="op" data-value="sin(">sin</button>
                     <button class="op" data-value="cos(">cos</button>
-
                     <button data-value="1">1</button>
                     <button data-value="2">2</button>
                     <button data-value="3">3</button>
                     <button class="op" data-value="-">-</button>
                     <button class="op" data-value="tan(">tan</button>
                     <button class="op" data-value="abs(">abs</button>
-
                     <button class="wide" data-value="0">0</button>
                     <button data-value=".">.</button>
                     <button class="op" data-value="+">+</button>
                     <button class="op" data-value="log10(">log</button>
                     <button class="op" data-value="log(">ln</button>
-
                     <button class="op" data-value="pi">pi</button>
                     <button class="op" data-value="e">e</button>
                     <button class="op" data-value="!">n!</button>
@@ -83,17 +73,24 @@
                     <button class="wide major" data-action="ans">Ans</button>
                 </div>
             </section>
-
             <section class="notes-space panel" aria-label="Sticky notes area">
-                <h2>Sticky Notes Space</h2>
-                <p>This space is reserved below the calculator for your future sticky notes.</p>
+                <div class="notes-head">
+                    <h2>Sticky Notes Space</h2>
+                    <button id="addStickyBtn" class="add-sticky-btn" type="button"
+                        aria-label="Add sticky note">+</button>
+                </div>
+                <p>Tap + to drop a sticky note into an open slot. Drag notes anywhere on the page.</p>
+                <div id="notesSlots" class="notes-slots" aria-label="Sticky note slots">
+                    <div class="note-slot" data-slot-index="0" aria-hidden="true"></div>
+                    <div class="note-slot" data-slot-index="1" aria-hidden="true"></div>
+                    <div class="note-slot" data-slot-index="2" aria-hidden="true"></div>
+                </div>
+                <div id="stickyLayer" class="sticky-layer" aria-label="Sticky notes layer"></div>
             </section>
         </section>
-
         <aside class="board panel">
             <h2>Whiteboard</h2>
             <p>Sketch formulas or notes while you calculate.</p>
-
             <div class="tools" aria-label="Whiteboard tools">
                 <label for="penColor">Color
                     <input id="penColor" type="color" value="#1d1b16" aria-label="Pen color">
@@ -104,18 +101,15 @@
                 <button id="eraserBtn" class="tool-btn" type="button">Eraser</button>
                 <button id="clearBoard" class="tool-btn" type="button">Clear</button>
             </div>
-
             <div class="board-wrap">
                 <canvas id="whiteboard" class="whiteboard" aria-label="Drawing whiteboard"></canvas>
             </div>
         </aside>
-
     </main>
-
     <footer class="site-footer" aria-label="Site footer"></footer>
-
     <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.2/lib/browser/math.js"></script>
     <script>
+        // --- DOM Elements ---
         const expressionInput = document.getElementById("expression");
         const resultOutput = document.getElementById("result");
         const keys = document.getElementById("keys");
@@ -125,58 +119,224 @@
         const penColor = document.getElementById("penColor");
         const penSize = document.getElementById("penSize");
         const historyList = document.getElementById("historyList");
+        const addStickyBtn = document.getElementById("addStickyBtn");
+        const notesSpace = document.querySelector(".notes-space");
+        const stickyLayer = document.getElementById("stickyLayer");
+        const noteSlots = Array.from(document.querySelectorAll(".note-slot"));
         const ctx = canvas.getContext("2d");
 
+        // --- Calculator Scope ---
         const scope = {
             ans: 0,
-            // Custom inverse helper to keep button labels intuitive.
             inv: (x) => 1 / x
         };
 
+        let stickyCounter = 0;
+        let activeDrag = null;
+        let drawing = false;
+        let erasing = false;
+
+        // --- Sticky Notes Local Storage ---
+        function saveStickyNotes() {
+            const notes = Array.from(stickyLayer.querySelectorAll('.sticky-note')).map(note => {
+                const textarea = note.querySelector('.sticky-input');
+                return {
+                    id: note.dataset.noteId,
+                    slot: note.dataset.attachedSlot,
+                    value: textarea ? textarea.value : ""
+                };
+            });
+            localStorage.setItem('stickyNotes', JSON.stringify(notes));
+        }
+        function loadStickyNotes() {
+            const notes = JSON.parse(localStorage.getItem('stickyNotes') || '[]');
+            notes.forEach(noteData => {
+                const slot = noteSlots.find(s => s.dataset.slotIndex === noteData.slot && !s.dataset.noteId);
+                if (!slot) return;
+                const note = document.createElement('article');
+                note.className = 'sticky-note color-yellow';
+                note.dataset.noteId = noteData.id;
+                note.dataset.attachedSlot = noteData.slot;
+                note.style.zIndex = String(20 + stickyCounter);
+                note.innerHTML = `
+                    <div class="sticky-drag-zone" aria-hidden="true"></div>
+                    <button class="sticky-remove" type="button" aria-label="Remove sticky note">x</button>
+                    <textarea class="sticky-input" placeholder="Write your note..."></textarea>
+                `;
+                stickyLayer.appendChild(note);
+                slot.dataset.noteId = noteData.id;
+                positionNoteOnSlot(note, slot);
+                const textarea = note.querySelector('.sticky-input');
+                if (textarea) textarea.value = noteData.value;
+                note.querySelector('.sticky-input').addEventListener('input', saveStickyNotes);
+            });
+        }
+        // --- Sticky Note Creation/Removal (with Save) ---
+        const originalCreateStickyNote = createStickyNote;
+        createStickyNote = function () {
+            originalCreateStickyNote.apply(this, arguments);
+            const note = stickyLayer.querySelector('.sticky-note:last-child .sticky-input');
+            if (note) note.addEventListener('input', saveStickyNotes);
+            saveStickyNotes();
+        };
+        const originalRemoveStickyNote = removeStickyNote;
+        removeStickyNote = function (note) {
+            originalRemoveStickyNote.apply(this, arguments);
+            saveStickyNotes();
+        };
+        window.addEventListener('DOMContentLoaded', loadStickyNotes);
+
+        // --- Sticky Note Logic ---
+        function getSlotRect(slot) { return slot.getBoundingClientRect(); }
+        function getLayerRect() { return stickyLayer.getBoundingClientRect(); }
+        function getOpenSlot() { return noteSlots.find((slot) => !slot.dataset.noteId) || null; }
+        function createStickyNote() {
+            const slot = getOpenSlot();
+            if (!slot) return;
+            const noteId = `sticky-${++stickyCounter}`;
+            const note = document.createElement("article");
+            note.className = "sticky-note color-yellow";
+            note.dataset.noteId = noteId;
+            note.dataset.attachedSlot = slot.dataset.slotIndex;
+            note.style.zIndex = String(20 + stickyCounter);
+            note.innerHTML = `
+                <div class="sticky-drag-zone" aria-hidden="true"></div>
+                <button class="sticky-remove" type="button" aria-label="Remove sticky note">x</button>
+                <textarea class="sticky-input" placeholder="Write your note..."></textarea>
+            `;
+            stickyLayer.appendChild(note);
+            slot.dataset.noteId = noteId;
+            positionNoteOnSlot(note, slot);
+            note.classList.add("pop-in");
+            note.addEventListener("animationend", () => note.classList.remove("pop-in"), { once: true });
+        }
+        function positionNoteOnSlot(note, slot) {
+            const slotRect = getSlotRect(slot);
+            const layerRect = getLayerRect();
+            // Calculate position relative to the sticky notes space, not the whole page
+            let x = slotRect.left - layerRect.left;
+            let y = slotRect.top - layerRect.top;
+            // Clamp Y to ensure the sticky note stays inside the container (no overhang)
+            y = Math.max(0, Math.min(y, layerRect.height - note.offsetHeight));
+            x = Math.max(0, Math.min(x, layerRect.width - note.offsetWidth));
+            note.style.left = `${x}px`;
+            note.style.top = `${y}px`;
+        }
+        function releaseSlotForNote(note) {
+            const attachedSlotIndex = note.dataset.attachedSlot;
+            if (attachedSlotIndex === undefined || attachedSlotIndex === "") return;
+            const slot = noteSlots.find((item) => item.dataset.slotIndex === attachedSlotIndex);
+            if (slot && slot.dataset.noteId === note.dataset.noteId) delete slot.dataset.noteId;
+            delete note.dataset.attachedSlot;
+        }
+        function maybeSnapToNearestSlot(note) {
+            const noteRect = note.getBoundingClientRect();
+            const noteCenterX = noteRect.left + noteRect.width / 2;
+            const noteCenterY = noteRect.top + noteRect.height / 2;
+            const threshold = Math.max(noteRect.width * 0.95, 110);
+            let bestSlot = null;
+            let bestDistance = Number.POSITIVE_INFINITY;
+            for (const slot of noteSlots) {
+                const occupiedByOther = slot.dataset.noteId && slot.dataset.noteId !== note.dataset.noteId;
+                if (occupiedByOther) continue;
+                const slotRect = getSlotRect(slot);
+                const slotCenterX = slotRect.left + slotRect.width / 2;
+                const slotCenterY = slotRect.top + slotRect.height / 2;
+                const distance = Math.hypot(slotCenterX - noteCenterX, slotCenterY - noteCenterY);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestSlot = slot;
+                }
+            }
+            if (!bestSlot || bestDistance > threshold) return;
+            releaseSlotForNote(note);
+            bestSlot.dataset.noteId = note.dataset.noteId;
+            note.dataset.attachedSlot = bestSlot.dataset.slotIndex;
+            positionNoteOnSlot(note, bestSlot);
+        }
+        function onStickyPointerDown(event) {
+            const note = event.target.closest(".sticky-note");
+            if (!note) return;
+            if (event.target.classList.contains("sticky-input") || event.target.classList.contains("sticky-remove")) return;
+            const noteRect = note.getBoundingClientRect();
+            note.style.zIndex = String(40 + stickyCounter++);
+            activeDrag = {
+                note,
+                pointerId: event.pointerId,
+                offsetX: event.clientX - noteRect.left,
+                offsetY: event.clientY - noteRect.top
+            };
+            note.setPointerCapture(event.pointerId);
+            releaseSlotForNote(note);
+            note.classList.add("dragging");
+            event.preventDefault();
+        }
+        function onStickyPointerMove(event) {
+            if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
+            const layerRect = getLayerRect();
+            const x = event.clientX - layerRect.left - activeDrag.offsetX;
+            const y = event.clientY - layerRect.top - activeDrag.offsetY;
+            activeDrag.note.style.left = `${x}px`;
+            activeDrag.note.style.top = `${y}px`;
+        }
+        function onStickyPointerUp(event) {
+            if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
+            const note = activeDrag.note;
+            note.classList.remove("dragging");
+            maybeSnapToNearestSlot(note);
+            note.releasePointerCapture(event.pointerId);
+            activeDrag = null;
+        }
+        function removeStickyNote(note) {
+            if (!note) return;
+            if (activeDrag && activeDrag.note === note) activeDrag = null;
+            releaseSlotForNote(note);
+            note.remove();
+        }
+        function refreshAttachedNotes() {
+            for (const slot of noteSlots) {
+                if (!slot.dataset.noteId) continue;
+                const note = stickyLayer.querySelector(`.sticky-note[data-note-id="${slot.dataset.noteId}"]`);
+                if (!note) {
+                    delete slot.dataset.noteId;
+                    continue;
+                }
+                if (note.dataset.attachedSlot === slot.dataset.slotIndex) positionNoteOnSlot(note, slot);
+            }
+        }
+
+        // --- Calculator Logic ---
         function appendValue(value) {
             expressionInput.value += value;
             expressionInput.focus();
         }
-
         function clearExpression() {
             expressionInput.value = "";
             resultOutput.textContent = "0";
         }
-
         function deleteLast() {
             expressionInput.value = expressionInput.value.slice(0, -1);
             expressionInput.focus();
         }
-
         function renderHistory(expression, result) {
             const item = document.createElement("li");
             const exp = document.createElement("span");
             const res = document.createElement("span");
-
             exp.className = "item-exp";
             res.className = "item-res";
             exp.textContent = expression;
             res.textContent = result;
-
             item.appendChild(exp);
             item.appendChild(res);
             historyList.prepend(item);
-
-            if (historyList.children.length > 12) {
-                historyList.removeChild(historyList.lastChild);
-            }
+            if (historyList.children.length > 12) historyList.removeChild(historyList.lastChild);
         }
-
         function evaluateExpression() {
             const raw = expressionInput.value.trim();
-            if (!raw) {
-                return;
-            }
-
+            if (!raw) return;
             try {
                 const evaluated = math.evaluate(raw, scope);
                 const result = typeof evaluated === "number" ? math.format(evaluated, { precision: 14 }) : String(evaluated);
-
                 scope.ans = evaluated;
                 resultOutput.textContent = result;
                 renderHistory(raw, result);
@@ -186,34 +346,26 @@
             }
         }
 
-        let drawing = false;
-        let erasing = false;
-
+        // --- Whiteboard Logic ---
         function fillBoardBackground() {
             ctx.save();
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.restore();
         }
-
         function resizeCanvas() {
             const rect = canvas.getBoundingClientRect();
             canvas.width = Math.max(1, Math.floor(rect.width));
             canvas.height = Math.max(1, Math.floor(rect.height));
             fillBoardBackground();
         }
-
         function startDrawing(x, y) {
             drawing = true;
             ctx.beginPath();
             ctx.moveTo(x, y);
         }
-
         function drawTo(x, y) {
-            if (!drawing) {
-                return;
-            }
-
+            if (!drawing) return;
             ctx.lineCap = "round";
             ctx.lineJoin = "round";
             ctx.lineWidth = Number(penSize.value);
@@ -221,12 +373,10 @@
             ctx.lineTo(x, y);
             ctx.stroke();
         }
-
         function stopDrawing() {
             drawing = false;
             ctx.closePath();
         }
-
         function getPoint(event) {
             const rect = canvas.getBoundingClientRect();
             return {
@@ -235,71 +385,56 @@
             };
         }
 
+        // --- Event Listeners ---
         canvas.addEventListener("pointerdown", (event) => {
             event.preventDefault();
             const point = getPoint(event);
             startDrawing(point.x, point.y);
         });
-
         canvas.addEventListener("pointermove", (event) => {
             event.preventDefault();
             const point = getPoint(event);
             drawTo(point.x, point.y);
         });
-
         canvas.addEventListener("pointerup", stopDrawing);
         canvas.addEventListener("pointerleave", stopDrawing);
-
         clearBoardBtn.addEventListener("click", fillBoardBackground);
-
         eraserBtn.addEventListener("click", () => {
             erasing = !erasing;
             eraserBtn.classList.toggle("active", erasing);
         });
-
-        window.addEventListener("resize", resizeCanvas);
+        addStickyBtn.addEventListener("click", createStickyNote);
+        stickyLayer.addEventListener("click", (event) => {
+            const removeButton = event.target.closest(".sticky-remove");
+            if (!removeButton) return;
+            const note = removeButton.closest(".sticky-note");
+            removeStickyNote(note);
+        });
+        stickyLayer.addEventListener("pointerdown", onStickyPointerDown);
+        stickyLayer.addEventListener("pointermove", onStickyPointerMove);
+        stickyLayer.addEventListener("pointerup", onStickyPointerUp);
+        stickyLayer.addEventListener("pointercancel", onStickyPointerUp);
+        window.addEventListener("resize", () => {
+            resizeCanvas();
+            refreshAttachedNotes();
+        });
         resizeCanvas();
-
         keys.addEventListener("click", (event) => {
             const target = event.target;
-            if (!(target instanceof HTMLButtonElement)) {
-                return;
-            }
-
+            if (!(target instanceof HTMLButtonElement)) return;
             const action = target.dataset.action;
             const value = target.dataset.value;
-
-            if (action === "clear") {
-                clearExpression();
-                return;
-            }
-
-            if (action === "delete") {
-                deleteLast();
-                return;
-            }
-
-            if (action === "evaluate") {
-                evaluateExpression();
-                return;
-            }
-
-            if (action === "ans") {
-                appendValue("ans");
-                return;
-            }
-
-            if (value) {
-                appendValue(value);
-            }
+            if (action === "clear") { clearExpression(); return; }
+            if (action === "delete") { deleteLast(); return; }
+            if (action === "evaluate") { evaluateExpression(); return; }
+            if (action === "ans") { appendValue("ans"); return; }
+            if (value) { appendValue(value); }
         });
-
         expressionInput.addEventListener("keydown", (event) => {
             if (event.key === "Enter") {
                 event.preventDefault();
                 evaluateExpression();
             }
-
             if (event.key === "Escape") {
                 clearExpression();
             }
