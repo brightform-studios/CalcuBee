@@ -329,14 +329,17 @@ button:active {
     width: var(--sticky-size);
     height: var(--sticky-size);
     background: #ffe084;
-    border: 2px dashed rgba(74, 64, 36, 0.24); /* Match .note-slot border */
-    border-radius: 16px; /* Match .note-slot border-radius */
+    border: 2px dashed rgba(74, 64, 36, 0.24);
+    /* Match .note-slot border */
+    border-radius: 16px;
+    /* Match .note-slot border-radius */
     display: flex;
     flex-direction: column;
     overflow: hidden;
     touch-action: none;
     pointer-events: auto;
-    margin: 0; /* Remove margin for perfect alignment */
+    margin: 0;
+    /* Remove margin for perfect alignment */
     cursor: pointer;
 }
 
@@ -425,6 +428,7 @@ button:active {
     flex-wrap: wrap;
     gap: 0.5rem;
     align-items: center;
+    justify-content: center;
 }
 
 .tools label {
@@ -517,6 +521,14 @@ button:active {
     border-radius: 10px;
     touch-action: none;
     cursor: crosshair;
+}
+
+.shape-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    padding-top: 0.5rem;
 }
 
 .history-list {
