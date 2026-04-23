@@ -1,5 +1,5 @@
 # CalcuBee
 
-A math and study helper provides useful tools to complete homework and hone skills
+A math study helper that provides useful tools to learn and complete homework faster
 
 Website link: https://brightform-studios.github.io/CalcuBee/
