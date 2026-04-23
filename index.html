@@ -171,19 +171,6 @@
                 note.querySelector('.sticky-input').addEventListener('input', saveStickyNotes);
             });
         }
-        // --- Sticky Note Creation/Removal (with Save) ---
-        const originalCreateStickyNote = createStickyNote;
-        createStickyNote = function () {
-            originalCreateStickyNote.apply(this, arguments);
-            const note = stickyLayer.querySelector('.sticky-note:last-child .sticky-input');
-            if (note) note.addEventListener('input', saveStickyNotes);
-            saveStickyNotes();
-        };
-        const originalRemoveStickyNote = removeStickyNote;
-        removeStickyNote = function (note) {
-            originalRemoveStickyNote.apply(this, arguments);
-            saveStickyNotes();
-        };
         window.addEventListener('DOMContentLoaded', loadStickyNotes);
 
         // --- Sticky Note Logic ---
@@ -209,6 +196,10 @@
             positionNoteOnSlot(note, slot);
             note.classList.add("pop-in");
             note.addEventListener("animationend", () => note.classList.remove("pop-in"), { once: true });
+            // Save logic directly here
+            const textarea = note.querySelector('.sticky-input');
+            if (textarea) textarea.addEventListener('input', saveStickyNotes);
+            saveStickyNotes();
         }
         function positionNoteOnSlot(note, slot) {
             const slotRect = getSlotRect(slot);
@@ -292,6 +283,7 @@
             if (activeDrag && activeDrag.note === note) activeDrag = null;
             releaseSlotForNote(note);
             note.remove();
+            saveStickyNotes();
         }
         function refreshAttachedNotes() {
             for (const slot of noteSlots) {

@@ -321,7 +321,7 @@ button:active {
     inset: 0;
     overflow: visible;
     z-index: 2000;
-    pointer-events: auto;
+    pointer-events: none;
 }
 
 .sticky-note {
