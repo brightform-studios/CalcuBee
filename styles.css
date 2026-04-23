@@ -321,7 +321,7 @@ button:active {
     inset: 0;
     overflow: visible;
     z-index: 2000;
-    pointer-events: none;
+    pointer-events: auto;
 }
 
 .sticky-note {
@@ -329,14 +329,14 @@ button:active {
     width: var(--sticky-size);
     height: var(--sticky-size);
     background: #ffe084;
-    border: 1px solid rgba(106, 79, 10, 0.25);
-    border-radius: 18px;
+    border: 2px dashed rgba(74, 64, 36, 0.24); /* Match .note-slot border */
+    border-radius: 16px; /* Match .note-slot border-radius */
     display: flex;
     flex-direction: column;
     overflow: hidden;
     touch-action: none;
     pointer-events: auto;
-    margin: 6px;
+    margin: 0; /* Remove margin for perfect alignment */
     cursor: pointer;
 }
 
