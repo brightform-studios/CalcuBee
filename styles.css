@@ -97,7 +97,6 @@ body {
     width: min(1700px, 100%);
     flex: 1;
     min-height: 0;
-    overflow: hidden;
     padding: clamp(0.6rem, 1.8vw, 1.2rem);
     display: grid;
     grid-template-columns: minmax(0, 280px) minmax(0, 1fr) minmax(0, 1fr);
@@ -259,7 +258,6 @@ button:active {
     flex-direction: column;
     gap: 0.7rem;
     grid-area: board;
-    overflow: hidden;
 }
 
 .history-panel {
@@ -268,7 +266,6 @@ button:active {
     flex-direction: column;
     gap: 0.6rem;
     grid-area: history;
-    overflow: hidden;
 }
 
 .notes-space {
@@ -280,6 +277,7 @@ button:active {
     padding: 1rem;
     padding-bottom: 1.3rem;
     overflow: visible;
+    align-self: stretch;
 }
 
 .notes-space h2 {
@@ -545,9 +543,9 @@ button:active {
     list-style: none;
     display: grid;
     gap: 0.42rem;
-    flex: 1;
-    min-height: 0;
-    max-height: none;
+    /* Keep history in a fixed viewport so new items stack and scroll. */
+    flex: 0 1 auto;
+    max-height: clamp(260px, 42vh, 460px);
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 0.2rem;
