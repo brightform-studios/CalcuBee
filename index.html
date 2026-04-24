@@ -20,6 +20,31 @@
     <div class="halo two" aria-hidden="true"></div>
     <header class="site-header" aria-label="Site header"></header>
     <main class="shell" aria-label="Calculator app">
+        <section class="practice-panel panel" aria-labelledby="practiceTitle">
+            <div class="practice-head">
+                <div>
+                    <h2 id="practiceTitle">Practice Generator</h2>
+                    <p>Spin up a random equation, solve it yourself, then reveal the answer when you are ready.</p>
+                </div>
+                <div class="practice-controls" aria-label="Practice generator controls">
+                    <label for="practiceDifficulty">Difficulty
+                        <select id="practiceDifficulty">
+                            <option value="easy">Easy</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </label>
+                    <button id="generatePracticeBtn" class="tool-btn" type="button">New Equation</button>
+                    <button id="revealPracticeBtn" class="tool-btn" type="button">Show Answer</button>
+                    <button id="usePracticeBtn" class="tool-btn" type="button">Use in Calculator</button>
+                </div>
+            </div>
+            <div class="practice-problem" aria-live="polite">
+                <span class="practice-label">Equation</span>
+                <strong id="practiceExpression" class="practice-expression"></strong>
+            </div>
+            <p id="practiceAnswer" class="practice-answer" hidden>Answer: <span id="practiceAnswerValue"></span></p>
+        </section>
         <aside class="history-panel panel">
             <h2 class="recent-calculations">Recent Calculations</h2>
             <p>Your latest results stay here while you keep working.</p>
@@ -120,6 +145,13 @@
         const expressionInput = document.getElementById("expression");
         const resultOutput = document.getElementById("result");
         const keys = document.getElementById("keys");
+        const practiceDifficulty = document.getElementById("practiceDifficulty");
+        const generatePracticeBtn = document.getElementById("generatePracticeBtn");
+        const revealPracticeBtn = document.getElementById("revealPracticeBtn");
+        const usePracticeBtn = document.getElementById("usePracticeBtn");
+        const practiceExpression = document.getElementById("practiceExpression");
+        const practiceAnswer = document.getElementById("practiceAnswer");
+        const practiceAnswerValue = document.getElementById("practiceAnswerValue");
         const canvas = document.getElementById("whiteboard");
         const clearBoardBtn = document.getElementById("clearBoard");
         const eraserBtn = document.getElementById("eraserBtn");
@@ -151,6 +183,7 @@
         let shapeMode = null; // 'circle' | 'square' | 'triangle' | null
         let lineStart = null;
         let lineSnapshot = null;
+        let currentPracticeEquation = null;
 
         // --- Sticky Notes Local Storage ---
         // Persist only essential note data so notes survive page reloads.
@@ -364,6 +397,86 @@
             }
         }
 
+        // --- Practice Generator Logic ---
+        function randomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+        function buildEasyEquation() {
+            const useAddition = Math.random() > 0.35;
+            let left = randomInt(2, 20);
+            let right = randomInt(1, 20);
+            if (!useAddition && right > left) [left, right] = [right, left];
+            return {
+                expression: `${left} ${useAddition ? '+' : '-'} ${right}`,
+                answer: useAddition ? left + right : left - right
+            };
+        }
+        function buildMediumEquation() {
+            const patterns = [
+                () => {
+                    const left = randomInt(3, 12);
+                    const right = randomInt(2, 12);
+                    return { expression: `${left} * ${right}`, answer: left * right };
+                },
+                () => {
+                    const divisor = randomInt(2, 12);
+                    const answer = randomInt(2, 12);
+                    return { expression: `${divisor * answer} / ${divisor}`, answer };
+                },
+                () => {
+                    const left = randomInt(4, 18);
+                    const right = randomInt(2, 9);
+                    const tail = randomInt(1, 12);
+                    return { expression: `(${left} + ${right}) * ${tail}`, answer: (left + right) * tail };
+                }
+            ];
+            return patterns[randomInt(0, patterns.length - 1)]();
+        }
+        function buildHardEquation() {
+            const patterns = [
+                () => {
+                    const base = randomInt(2, 7);
+                    const exponent = randomInt(2, 3);
+                    const offset = randomInt(3, 18);
+                    return { expression: `${base}^${exponent} + ${offset}`, answer: Math.pow(base, exponent) + offset };
+                },
+                () => {
+                    const left = randomInt(6, 20);
+                    const right = randomInt(2, 9);
+                    const divisor = randomInt(2, 6);
+                    const expression = `(${left} - ${right}) * ${divisor}`;
+                    return { expression, answer: (left - right) * divisor };
+                },
+                () => {
+                    const root = randomInt(2, 12);
+                    const bonus = randomInt(4, 20);
+                    return { expression: `sqrt(${root * root}) + ${bonus}`, answer: root + bonus };
+                }
+            ];
+            return patterns[randomInt(0, patterns.length - 1)]();
+        }
+        function generatePracticeEquation() {
+            const difficulty = practiceDifficulty.value;
+            const nextEquation = difficulty === "easy"
+                ? buildEasyEquation()
+                : difficulty === "hard"
+                    ? buildHardEquation()
+                    : buildMediumEquation();
+            currentPracticeEquation = nextEquation;
+            practiceExpression.textContent = nextEquation.expression;
+            practiceAnswer.hidden = true;
+            practiceAnswerValue.textContent = math.format(nextEquation.answer, { precision: 14 });
+        }
+        function revealPracticeEquation() {
+            if (!currentPracticeEquation) return;
+            practiceAnswer.hidden = false;
+        }
+        function usePracticeEquation() {
+            if (!currentPracticeEquation) return;
+            expressionInput.value = currentPracticeEquation.expression;
+            expressionInput.focus();
+        }
+
         // --- Whiteboard Logic ---
         // Reset drawing surface to a white background used by eraser mode.
         function fillBoardBackground() {
@@ -522,6 +635,10 @@
             triangleBtn.classList.toggle("active", shapeMode === 'triangle');
             if (!shapeMode) pencilBtn.classList.add("active");
         });
+        generatePracticeBtn.addEventListener("click", generatePracticeEquation);
+        revealPracticeBtn.addEventListener("click", revealPracticeEquation);
+        usePracticeBtn.addEventListener("click", usePracticeEquation);
+        practiceDifficulty.addEventListener("change", generatePracticeEquation);
         addStickyBtn.addEventListener("click", createStickyNote);
         stickyLayer.addEventListener("click", (event) => {
             const removeButton = event.target.closest(".sticky-remove");
@@ -559,6 +676,7 @@
                 clearExpression();
             }
         });
+        generatePracticeEquation();
     </script>
 </body>
 
