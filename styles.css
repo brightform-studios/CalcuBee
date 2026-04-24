@@ -542,10 +542,8 @@ button:active {
 .history-list {
     list-style: none;
     display: grid;
-    gap: 0.42rem;
-    /* Keep history in a fixed viewport so new items stack and scroll. */
-    flex: 0 1 auto;
-    max-height: clamp(260px, 42vh, 460px);
+    gap: 0.28rem;
+    max-height: clamp(200px, 38vh, 420px);
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 0.2rem;
@@ -553,23 +551,26 @@ button:active {
 
 .history-list li {
     border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 0.52rem;
+    border-radius: 6px;
+    padding: 0.12rem 0.4rem;
     background: rgba(255, 255, 255, 0.75);
 }
 
 .item-exp {
-    font-size: 0.85rem;
+    font-size: 0.65rem;
     color: var(--muted);
     display: block;
     overflow-wrap: anywhere;
+    line-height: 1.2;
 }
 
 .item-res {
-    margin-top: 0.2rem;
+    margin-top: 0;
+    font-size: 0.75rem;
     font-weight: 700;
     display: block;
     overflow-wrap: anywhere;
+    line-height: 1.2;
 }
 
 @media (max-width: 1280px) {
