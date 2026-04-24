@@ -183,31 +183,34 @@ small,
     background: rgba(255, 255, 255, 0.8);
     padding: 0.75rem;
     margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
 
 .expression {
-    width: 100%;
+    flex: 1;
     border: 0;
     background: transparent;
     color: var(--ink);
     font-size: clamp(1rem, 2.6vw, 1.1rem);
     font-family: inherit;
     outline: none;
-    margin-bottom: 0.35rem;
 }
 
 .result {
     text-align: right;
-    min-height: 1.7rem;
     font-size: clamp(1rem, 3vw, 1.35rem);
     font-weight: 700;
     word-break: break-word;
+    white-space: nowrap;
 }
 
 .grid {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
 button {
@@ -270,7 +273,7 @@ button:active {
     align-content: start;
     gap: 0.45rem;
     padding: 1rem;
-    padding-bottom: 1rem;
+    padding-bottom: 1.3rem;
     overflow: visible;
 }
 
@@ -411,6 +414,7 @@ button:active {
     color: var(--muted);
     font-size: 0.9rem;
     max-width: 52ch;
+    margin-bottom: 0.3rem;
 }
 
 .board h2 {
@@ -421,6 +425,7 @@ button:active {
 .board p {
     color: var(--muted);
     font-size: 0.9rem;
+    margin-bottom: 0.3rem;
 }
 
 .tools {
@@ -429,6 +434,7 @@ button:active {
     gap: 0.5rem;
     align-items: center;
     justify-content: center;
+    margin-bottom: 0.3rem;
 }
 
 .tools label {
@@ -528,7 +534,7 @@ button:active {
     flex-wrap: wrap;
     gap: 0.5rem;
     justify-content: center;
-    padding-top: 0.5rem;
+    padding-top: 0.3rem;
 }
 
 .history-list {
