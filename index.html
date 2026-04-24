@@ -36,7 +36,6 @@
                     </label>
                     <button id="generatePracticeBtn" class="tool-btn" type="button">New Equation</button>
                     <button id="revealPracticeBtn" class="tool-btn" type="button">Show Answer</button>
-                    <button id="usePracticeBtn" class="tool-btn" type="button">Use in Calculator</button>
                 </div>
             </div>
             <div class="practice-problem" aria-live="polite">
@@ -46,7 +45,7 @@
             <p id="practiceAnswer" class="practice-answer" hidden>Answer: <span id="practiceAnswerValue"></span></p>
         </section>
         <aside class="history-panel panel">
-            <h2 class="recent-calculations">Recent Calculations</h2>
+            <h2>Recent Calculations</h2>
             <p>Your latest results stay here while you keep working.</p>
             <ul id="historyList" class="history-list" aria-label="Recent calculations"></ul>
         </aside>
@@ -148,7 +147,6 @@
         const practiceDifficulty = document.getElementById("practiceDifficulty");
         const generatePracticeBtn = document.getElementById("generatePracticeBtn");
         const revealPracticeBtn = document.getElementById("revealPracticeBtn");
-        const usePracticeBtn = document.getElementById("usePracticeBtn");
         const practiceExpression = document.getElementById("practiceExpression");
         const practiceAnswer = document.getElementById("practiceAnswer");
         const practiceAnswerValue = document.getElementById("practiceAnswerValue");
@@ -471,11 +469,6 @@
             if (!currentPracticeEquation) return;
             practiceAnswer.hidden = false;
         }
-        function usePracticeEquation() {
-            if (!currentPracticeEquation) return;
-            expressionInput.value = currentPracticeEquation.expression;
-            expressionInput.focus();
-        }
 
         // --- Whiteboard Logic ---
         // Reset drawing surface to a white background used by eraser mode.
@@ -637,7 +630,6 @@
         });
         generatePracticeBtn.addEventListener("click", generatePracticeEquation);
         revealPracticeBtn.addEventListener("click", revealPracticeEquation);
-        usePracticeBtn.addEventListener("click", usePracticeEquation);
         practiceDifficulty.addEventListener("change", generatePracticeEquation);
         addStickyBtn.addEventListener("click", createStickyNote);
         stickyLayer.addEventListener("click", (event) => {
