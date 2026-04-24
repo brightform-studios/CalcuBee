@@ -195,6 +195,50 @@
         // Slot helpers keep note placement deterministic and easy to snap back.
         function getSlotRect(slot) { return slot.getBoundingClientRect(); }
         function getLayerRect() { return stickyLayer.getBoundingClientRect(); }
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(value, max));
+        }
+        function getStickyBounds(note) {
+            const layerRect = getLayerRect();
+            const safeGap = 8;
+            const isViewportLayer = getComputedStyle(stickyLayer).position === "fixed";
+            const header = isViewportLayer ? document.querySelector(".site-header") : null;
+            const footer = isViewportLayer ? document.querySelector(".site-footer") : null;
+
+            let minY = safeGap;
+            if (header) {
+                const headerRect = header.getBoundingClientRect();
+                const headerBottom = headerRect.bottom - layerRect.top;
+                if (headerBottom > 0) minY = Math.max(0, headerBottom + safeGap);
+            }
+
+            let maxY = layerRect.height - note.offsetHeight - safeGap;
+            if (footer) {
+                const footerRect = footer.getBoundingClientRect();
+                const footerTop = footerRect.top - layerRect.top;
+                if (footerTop < layerRect.height) {
+                    maxY = Math.min(maxY, footerTop - note.offsetHeight - safeGap);
+                }
+            }
+
+            const maxX = Math.max(safeGap, layerRect.width - note.offsetWidth - safeGap);
+            minY = Math.max(0, minY);
+            maxY = Math.max(minY, maxY);
+
+            return {
+                minX: safeGap,
+                maxX,
+                minY,
+                maxY
+            };
+        }
+        function setClampedNotePosition(note, x, y) {
+            const bounds = getStickyBounds(note);
+            const nextX = clamp(x, bounds.minX, bounds.maxX);
+            const nextY = clamp(y, bounds.minY, bounds.maxY);
+            note.style.left = `${nextX}px`;
+            note.style.top = `${nextY}px`;
+        }
         function getOpenSlot() { return noteSlots.find((slot) => !slot.dataset.noteId) || null; }
         function createStickyNote() {
             const slot = getOpenSlot();
@@ -219,18 +263,15 @@
             const textarea = note.querySelector('.sticky-input');
             if (textarea) textarea.addEventListener('input', saveStickyNotes);
             saveStickyNotes();
+            refreshAttachedNotes();
         }
         function positionNoteOnSlot(note, slot) {
             const slotRect = getSlotRect(slot);
             const layerRect = getLayerRect();
             // Calculate position relative to the sticky notes space, not the whole page
-            let x = slotRect.left - layerRect.left;
-            let y = slotRect.top - layerRect.top;
-            // Clamp Y to ensure the sticky note stays inside the container (no overhang)
-            y = Math.max(0, Math.min(y, layerRect.height - note.offsetHeight));
-            x = Math.max(0, Math.min(x, layerRect.width - note.offsetWidth));
-            note.style.left = `${x}px`;
-            note.style.top = `${y}px`;
+            const x = slotRect.left - layerRect.left;
+            const y = slotRect.top - layerRect.top;
+            setClampedNotePosition(note, x, y);
         }
         function releaseSlotForNote(note) {
             const attachedSlotIndex = note.dataset.attachedSlot;
@@ -289,8 +330,7 @@
             const layerRect = getLayerRect();
             const x = event.clientX - layerRect.left - activeDrag.offsetX;
             const y = event.clientY - layerRect.top - activeDrag.offsetY;
-            activeDrag.note.style.left = `${x}px`;
-            activeDrag.note.style.top = `${y}px`;
+            setClampedNotePosition(activeDrag.note, x, y);
         }
         // End drag and attempt a nearest-slot snap.
         function onStickyPointerUp(event) {
@@ -307,6 +347,7 @@
             releaseSlotForNote(note);
             note.remove();
             saveStickyNotes();
+            refreshAttachedNotes();
         }
         function refreshAttachedNotes() {
             for (const slot of noteSlots) {
@@ -317,6 +358,12 @@
                     continue;
                 }
                 if (note.dataset.attachedSlot === slot.dataset.slotIndex) positionNoteOnSlot(note, slot);
+            }
+            for (const note of stickyLayer.querySelectorAll(".sticky-note")) {
+                if (note.dataset.attachedSlot !== undefined && note.dataset.attachedSlot !== "") continue;
+                const currentX = parseFloat(note.style.left || "0");
+                const currentY = parseFloat(note.style.top || "0");
+                setClampedNotePosition(note, currentX, currentY);
             }
         }
 
@@ -537,6 +584,10 @@
             resizeCanvas();
             refreshAttachedNotes();
         });
+        const slotLayoutObserver = new ResizeObserver(() => {
+            refreshAttachedNotes();
+        });
+        slotLayoutObserver.observe(noteSlots[0]?.parentElement || notesSpace);
         resizeCanvas();
         // Handle all calculator button clicks via event delegation.
         keys.addEventListener("click", (event) => {

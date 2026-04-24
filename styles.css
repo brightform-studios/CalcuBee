@@ -17,6 +17,11 @@ h2.recent-calculations {
     --line: rgba(29, 27, 22, 0.14);
     --ok: #1f7a2f;
     --sticky-size: 182px;
+    --shell-gap: clamp(0.35rem, 0.9vw, 0.65rem);
+    --footer-gap: clamp(0.5rem, 1vw, 0.8rem);
+    --edge-safe: 12px;
+    --header-h: 52px;
+    --footer-h: 52px;
 }
 
 * {
@@ -28,29 +33,33 @@ h2.recent-calculations {
 
 .site-header {
     width: 100%;
-    height: 52px;
+    height: var(--header-h);
     flex-shrink: 0;
     background: var(--accent);
     border-bottom: 2px solid var(--accent-strong);
+    margin-bottom: 0.5rem;
 }
 
 .site-footer {
     width: 100%;
-    height: 52px;
+    height: var(--footer-h);
     flex-shrink: 0;
+    margin-top: var(--footer-gap);
     background: var(--accent);
     border-top: 2px solid var(--accent-strong);
+    position: relative;
+    z-index: 30;
 }
 
 body {
-    height: 100dvh;
+    min-height: 100dvh;
     font-family: Arial, Helvetica, sans-serif;
     color: var(--ink);
     background: #fff6bf;
     display: flex;
     flex-direction: column;
     align-items: center;
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: hidden;
 }
 
@@ -97,21 +106,26 @@ body {
     width: min(1700px, 100%);
     flex: 1;
     min-height: 0;
-    padding: clamp(0.6rem, 1.8vw, 1.2rem);
+    overflow: hidden;
+    padding: var(--shell-gap);
+    margin-bottom: 0;
+    height: calc(100dvh - var(--header-h) - var(--footer-h) - var(--footer-gap) - var(--edge-safe));
+    max-height: calc(100dvh - var(--header-h) - var(--footer-h) - var(--footer-gap) - var(--edge-safe));
     display: grid;
     grid-template-columns: minmax(0, 280px) minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas: "history center board";
     align-items: stretch;
-    gap: 1rem;
+    gap: 0.5rem;
     animation: rise 0.45s ease;
 }
 
 .center-column {
     grid-area: center;
     display: grid;
-    gap: 1rem;
+    gap: 0.55rem;
     grid-template-rows: auto 1fr;
     align-content: stretch;
+    min-height: 0;
 }
 
 @keyframes rise {
@@ -130,11 +144,11 @@ body {
     background: var(--card);
     backdrop-filter: blur(10px);
     border: 1px solid var(--line);
-    border-radius: 22px;
+    border-radius: 18px;
 }
 
 .calculator {
-    padding: 1rem;
+    padding: 0.55rem;
     width: 100%;
     max-width: 680px;
     min-width: 0;
@@ -145,7 +159,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.45rem;
 }
 
 h1,
@@ -181,13 +195,13 @@ small,
 
 .display {
     border: 1px solid var(--line);
-    border-radius: 16px;
+    border-radius: 12px;
     background: rgba(255, 255, 255, 0.8);
-    padding: 0.75rem;
-    margin-bottom: 1.2rem;
+    padding: 0.45rem 0.65rem;
+    margin-bottom: 0.55rem;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.65rem;
 }
 
 .expression {
@@ -217,11 +231,12 @@ small,
 
 button {
     border: 0;
-    border-radius: 12px;
-    min-height: 44px;
-    max-height: 64px;
+    border-radius: 10px;
+    min-height: 34px;
+    max-height: 50px;
+    padding: 0.3rem 0.5rem;
     font: inherit;
-    font-size: clamp(0.82rem, 1.1vw, 1rem);
+    font-size: clamp(0.74rem, 0.95vw, 0.88rem);
     font-weight: 600;
     color: var(--ink);
     background: rgba(255, 255, 255, 0.85);
@@ -253,29 +268,34 @@ button:active {
 }
 
 .board {
-    padding: 1rem;
+    padding: 0.55rem;
     display: flex;
     flex-direction: column;
-    gap: 0.7rem;
+    gap: 0.4rem;
     grid-area: board;
+    overflow: hidden;
+    min-height: 0;
 }
 
 .history-panel {
-    padding: 1rem;
+    padding: 0.55rem;
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.3rem;
     grid-area: history;
+    overflow: hidden;
+    align-self: stretch;
+    min-height: 0;
 }
 
 .notes-space {
     position: relative;
-    min-height: 250px;
+    min-height: 120px;
     display: grid;
     align-content: start;
-    gap: 0.45rem;
-    padding: 1rem;
-    padding-bottom: 1.3rem;
+    gap: 0.35rem;
+    padding: 0.55rem;
+    padding-bottom: 0.75rem;
     overflow: visible;
     align-self: stretch;
 }
@@ -305,21 +325,22 @@ button:active {
 
 .notes-slots {
     position: static;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, var(--sticky-size));
+    display: flex;
+    flex-wrap: wrap;
     justify-content: center;
+    align-content: flex-start;
     gap: 0.4rem;
+    width: min(calc(var(--sticky-size) * 3 + 0.8rem), 100%);
+    margin: 0.35rem auto 0;
     z-index: 1;
     pointer-events: none;
 }
 
 .note-slot {
+    flex: 0 0 var(--sticky-size);
     width: var(--sticky-size);
     height: var(--sticky-size);
-    border-radius: 16px;
-    border: 2px dashed rgba(74, 64, 36, 0.24);
-    background: linear-gradient(145deg, rgba(255, 241, 182, 0.45), rgba(255, 231, 145, 0.28));
-    margin: 6px;
+    border-radius: 10px;
 }
 
 .sticky-layer {
@@ -373,9 +394,8 @@ button:active {
     position: absolute;
     top: 0.4rem;
     right: 0.4rem;
-    min-height: 20px;
-    width: 20px;
-    height: 20px;
+    width: 1.2rem;
+    height: 1.2rem;
     border: 0;
     background: transparent;
     color: #6a4b09;
@@ -515,15 +535,15 @@ button:active {
     flex: 1;
     border: 1px solid var(--line);
     border-radius: 14px;
-    padding: 0.5rem;
+    padding: 0.35rem;
     background: rgba(255, 255, 255, 0.82);
-    min-height: 200px;
+    min-height: 90px;
 }
 
 .whiteboard {
     width: 100%;
     height: 100%;
-    min-height: 180px;
+    min-height: 70px;
     display: block;
     background: #ffffff;
     border-radius: 10px;
@@ -542,8 +562,8 @@ button:active {
 .history-list {
     list-style: none;
     display: grid;
-    gap: 0.45rem;
-    max-height: clamp(200px, 38vh, 420px);
+    gap: 0.24rem;
+    max-height: clamp(170px, 32vh, 320px);
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 0.2rem;
@@ -551,40 +571,85 @@ button:active {
 
 .history-list li {
     border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 0.45rem 0.6rem;
+    border-radius: 7px;
+    padding: 0.14rem 0.35rem;
     background: rgba(255, 255, 255, 0.75);
 }
 
 .item-exp {
-    font-size: 0.8rem;
+    font-size: 0.66rem;
     color: var(--muted);
     display: block;
     overflow-wrap: anywhere;
-    line-height: 1.3;
+    line-height: 1.15;
 }
 
 .item-res {
-    margin-top: 0.15rem;
-    font-size: 0.95rem;
+    margin-top: 0;
+    font-size: 0.76rem;
     font-weight: 700;
     display: block;
     overflow-wrap: anywhere;
-    line-height: 1.3;
+    line-height: 1.15;
 }
 
 @media (max-width: 1280px) {
     .shell {
-        gap: 0.85rem;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 1360px) {
+    :root {
+        --sticky-size: 148px;
+    }
+
+    .shell {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) minmax(0, 0.72fr);
+        grid-template-areas:
+            "center board"
+            "history history";
+    }
+
+    .sticky-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+    }
+
+    .history-list {
+        max-height: clamp(120px, 20vh, 170px);
+    }
+
+    .board-wrap {
+        min-height: clamp(150px, 28vh, 220px);
+    }
+
+    .whiteboard {
+        min-height: clamp(130px, 24vh, 190px);
     }
 }
 
 @media (max-width: 1120px) {
+    body {
+        height: auto;
+        min-height: 100dvh;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
     .shell {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        flex: none;
+        height: auto;
+        max-height: none;
+        grid-template-columns: 1fr;
         grid-template-areas:
-            "center board"
-            "history board";
+            "center"
+            "history"
+            "board";
+        padding-bottom: clamp(0.45rem, 1.2vw, 0.9rem);
+        margin-bottom: 0;
     }
 
     .center-column {
@@ -596,44 +661,41 @@ button:active {
     }
 
     .notes-space {
-        min-height: 220px;
+        min-height: calc(var(--sticky-size) + 5.6rem);
+        overflow: visible;
         align-self: auto;
     }
 
+    .sticky-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+    }
+
     .history-list {
-        max-height: 260px;
+        max-height: clamp(170px, 32vh, 240px);
+    }
+
+    .board-wrap {
+        min-height: clamp(220px, 44vh, 320px);
+    }
+
+    .whiteboard {
+        min-height: clamp(190px, 40vh, 290px);
     }
 }
 
 @media (max-width: 920px) {
-    body {
-        height: auto;
-        min-height: 100dvh;
-        overflow-y: auto;
-        overflow-x: hidden;
-    }
-
-    .shell {
-        flex: none;
-        height: auto;
-        grid-template-columns: 1fr;
-        grid-template-areas:
-            "center"
-            "history"
-            "board";
-        padding-bottom: clamp(0.6rem, 1.8vw, 1.2rem);
-    }
-
     .board-wrap {
-        min-height: 320px;
+        min-height: clamp(220px, 44vh, 320px);
     }
 
     .whiteboard {
-        min-height: 290px;
+        min-height: clamp(190px, 40vh, 290px);
     }
 
     .history-list {
-        max-height: 240px;
+        max-height: clamp(170px, 32vh, 240px);
     }
 }
 
@@ -652,7 +714,11 @@ button:active {
     .history-panel,
     .board,
     .notes-space {
-        padding: 0.78rem;
+        padding: 0.6rem;
+    }
+
+    .notes-space {
+        min-height: calc(var(--sticky-size) + 5rem);
     }
 
     .grid {
@@ -660,8 +726,8 @@ button:active {
     }
 
     button {
-        min-height: 42px;
-        font-size: 0.92rem;
+        min-height: 36px;
+        font-size: 0.82rem;
     }
 
     .tools input[type="range"] {
@@ -669,12 +735,12 @@ button:active {
     }
 
     .board-wrap {
-        min-height: 260px;
+        min-height: clamp(190px, 40vh, 260px);
         padding: 0.4rem;
     }
 
     .whiteboard {
-        min-height: 240px;
+        min-height: clamp(170px, 36vh, 240px);
     }
 
     .notes-slots {
@@ -685,5 +751,50 @@ button:active {
     .note-slot,
     .sticky-note {
         height: var(--sticky-size);
+    }
+}
+
+@media (max-height: 860px) {
+    :root {
+        --shell-gap: clamp(0.25rem, 0.6vw, 0.45rem);
+        --footer-gap: clamp(0.35rem, 0.7vw, 0.55rem);
+        --sticky-size: 164px;
+    }
+
+    .board-wrap {
+        min-height: 80px;
+    }
+
+    .whiteboard {
+        min-height: 64px;
+    }
+
+    .history-list {
+        max-height: clamp(130px, 26vh, 240px);
+    }
+
+    button {
+        min-height: 32px;
+        font-size: clamp(0.7rem, 0.9vw, 0.84rem);
+    }
+}
+
+@media (max-height: 720px) {
+    :root {
+        --sticky-size: 146px;
+        --header-h: 46px;
+        --footer-h: 46px;
+    }
+
+    .shell {
+        max-height: calc(100dvh - var(--header-h) - var(--footer-h) - var(--footer-gap) - var(--edge-safe));
+    }
+
+    .history-list {
+        max-height: clamp(110px, 22vh, 180px);
+    }
+
+    .notes-space {
+        min-height: calc(var(--sticky-size) + 3.6rem);
     }
 }
