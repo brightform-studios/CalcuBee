@@ -43,7 +43,9 @@ h2.recent-calculations {
     flex-shrink: 0;
     background: var(--accent);
     border-top: 2px solid var(--accent-strong);
-    z-index: 100;
+    z-index: 10000;
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 body {
@@ -101,6 +103,7 @@ body {
     flex: 1;
     min-height: 0;
     padding: clamp(0.6rem, 1.8vw, 1.2rem);
+    padding-bottom: calc(clamp(0.6rem, 1.8vw, 1.2rem) + 52px);
     display: grid;
     grid-template-columns: minmax(240px, 300px) minmax(0, 680px) minmax(480px, 1fr);
     grid-template-areas: "history center board";
@@ -610,12 +613,22 @@ button:active {
 }
 
 @media (max-width: 920px) {
+    body {
+        height: auto;
+        min-height: 100dvh;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
     .shell {
+        flex: none;
+        height: auto;
         grid-template-columns: 1fr;
         grid-template-areas:
             "center"
             "history"
             "board";
+        padding-bottom: 72px;
     }
 
     .board-wrap {
