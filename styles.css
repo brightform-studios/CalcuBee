@@ -35,11 +35,15 @@ h2.recent-calculations {
 }
 
 .site-footer {
-    width: 100%;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     height: 52px;
     flex-shrink: 0;
     background: var(--accent);
     border-top: 2px solid var(--accent-strong);
+    z-index: 100;
 }
 
 body {
@@ -50,7 +54,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    overflow-x: hidden;
+    overflow: hidden;
 }
 
 .halo {
