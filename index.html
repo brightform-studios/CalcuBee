@@ -153,6 +153,7 @@
         let lineSnapshot = null;
 
         // --- Sticky Notes Local Storage ---
+        // Persist only essential note data so notes survive page reloads.
         function saveStickyNotes() {
             const notes = Array.from(stickyLayer.querySelectorAll('.sticky-note')).map(note => {
                 const textarea = note.querySelector('.sticky-input');
@@ -164,6 +165,7 @@
             });
             localStorage.setItem('stickyNotes', JSON.stringify(notes));
         }
+        // Restore notes and reattach per-note input listeners after loading.
         function loadStickyNotes() {
             const notes = JSON.parse(localStorage.getItem('stickyNotes') || '[]');
             notes.forEach(noteData => {
@@ -190,6 +192,7 @@
         window.addEventListener('DOMContentLoaded', loadStickyNotes);
 
         // --- Sticky Note Logic ---
+        // Slot helpers keep note placement deterministic and easy to snap back.
         function getSlotRect(slot) { return slot.getBoundingClientRect(); }
         function getLayerRect() { return stickyLayer.getBoundingClientRect(); }
         function getOpenSlot() { return noteSlots.find((slot) => !slot.dataset.noteId) || null; }
@@ -212,7 +215,7 @@
             positionNoteOnSlot(note, slot);
             note.classList.add("pop-in");
             note.addEventListener("animationend", () => note.classList.remove("pop-in"), { once: true });
-            // Save logic directly here
+            // Save note text live so users do not lose edits.
             const textarea = note.querySelector('.sticky-input');
             if (textarea) textarea.addEventListener('input', saveStickyNotes);
             saveStickyNotes();
@@ -236,6 +239,7 @@
             if (slot && slot.dataset.noteId === note.dataset.noteId) delete slot.dataset.noteId;
             delete note.dataset.attachedSlot;
         }
+        // Snap dropped notes to the nearest available slot within a distance threshold.
         function maybeSnapToNearestSlot(note) {
             const noteRect = note.getBoundingClientRect();
             const noteCenterX = noteRect.left + noteRect.width / 2;
@@ -261,6 +265,7 @@
             note.dataset.attachedSlot = bestSlot.dataset.slotIndex;
             positionNoteOnSlot(note, bestSlot);
         }
+        // Begin drag only from note chrome (not textarea/remove button).
         function onStickyPointerDown(event) {
             const note = event.target.closest(".sticky-note");
             if (!note) return;
@@ -278,6 +283,7 @@
             note.classList.add("dragging");
             event.preventDefault();
         }
+        // Track pointer movement in sticky-layer coordinates.
         function onStickyPointerMove(event) {
             if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
             const layerRect = getLayerRect();
@@ -286,6 +292,7 @@
             activeDrag.note.style.left = `${x}px`;
             activeDrag.note.style.top = `${y}px`;
         }
+        // End drag and attempt a nearest-slot snap.
         function onStickyPointerUp(event) {
             if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
             const note = activeDrag.note;
@@ -314,6 +321,7 @@
         }
 
         // --- Calculator Logic ---
+        // Append raw token text into the expression input.
         function appendValue(value) {
             expressionInput.value += value;
             expressionInput.focus();
@@ -326,6 +334,7 @@
             expressionInput.value = expressionInput.value.slice(0, -1);
             expressionInput.focus();
         }
+        // Keep a compact, newest-first history list (up to 12 entries).
         function renderHistory(expression, result) {
             const item = document.createElement("li");
             const exp = document.createElement("span");
@@ -339,6 +348,7 @@
             historyList.prepend(item);
             if (historyList.children.length > 12) historyList.removeChild(historyList.lastChild);
         }
+        // Evaluate with math.js using scope variables/functions (e.g., ans, inv).
         function evaluateExpression() {
             const raw = expressionInput.value.trim();
             if (!raw) return;
@@ -355,6 +365,7 @@
         }
 
         // --- Whiteboard Logic ---
+        // Reset drawing surface to a white background used by eraser mode.
         function fillBoardBackground() {
             ctx.save();
             ctx.fillStyle = "#ffffff";
@@ -367,6 +378,7 @@
             canvas.height = Math.max(1, Math.floor(rect.height));
             fillBoardBackground();
         }
+        // In line/shape modes we capture a canvas snapshot for live preview.
         function startDrawing(x, y) {
             if (lineMode || shapeMode) {
                 lineStart = { x, y };
@@ -378,6 +390,7 @@
             ctx.beginPath();
             ctx.moveTo(x, y);
         }
+        // Repaint from snapshot each move so only one preview shape is visible.
         function drawShapePreview(x, y) {
             ctx.putImageData(lineSnapshot, 0, 0);
             const lw = Number(penSize.value);
@@ -402,6 +415,7 @@
             }
             ctx.stroke();
         }
+        // Route pointer movement to line preview, shape preview, or freehand stroke.
         function drawTo(x, y) {
             if (!drawing) return;
             if (lineMode && lineStart) {
@@ -447,6 +461,7 @@
         }
 
         // --- Event Listeners ---
+        // Pointer events support mouse, touch, and pen with one input path.
         canvas.addEventListener("pointerdown", (event) => {
             event.preventDefault();
             const point = getPoint(event);
@@ -461,6 +476,7 @@
         canvas.addEventListener("pointerleave", (event) => stopDrawing(event));
 
         clearBoardBtn.addEventListener("click", fillBoardBackground);
+        // Ensure only one drawing mode is active at any given time.
         function deactivateAllTools() {
             erasing = false;
             lineMode = false;
@@ -522,6 +538,7 @@
             refreshAttachedNotes();
         });
         resizeCanvas();
+        // Handle all calculator button clicks via event delegation.
         keys.addEventListener("click", (event) => {
             const target = event.target;
             if (!(target instanceof HTMLButtonElement)) return;

@@ -541,9 +541,11 @@ button:active {
     list-style: none;
     display: grid;
     gap: 0.42rem;
-    flex: 1;
-    max-height: none;
-    overflow: auto;
+    /* Keep history in a fixed viewport so new items stack and scroll. */
+    flex: 0 1 auto;
+    max-height: clamp(260px, 42vh, 460px);
+    overflow-y: auto;
+    overflow-x: hidden;
     padding-right: 0.2rem;
 }
 
