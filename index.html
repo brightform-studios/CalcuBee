@@ -109,7 +109,6 @@
                     <div class="note-slot" data-slot-index="1" aria-hidden="true"></div>
                     <div class="note-slot" data-slot-index="2" aria-hidden="true"></div>
                 </div>
-                <div id="stickyLayer" class="sticky-layer" aria-label="Sticky notes layer"></div>
             </section>
         </section>
         <aside class="board panel">
@@ -137,6 +136,7 @@
             </div>
         </aside>
     </main>
+    <div id="stickyLayer" class="sticky-layer" aria-label="Sticky notes layer"></div>
     <footer class="site-footer" aria-label="Site footer"></footer>
     <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.2/lib/browser/math.js"></script>
     <script>
@@ -186,22 +186,36 @@
         // --- Sticky Notes Local Storage ---
         // Persist only essential note data so notes survive page reloads.
         function saveStickyNotes() {
-            const notes = Array.from(stickyLayer.querySelectorAll('.sticky-note')).map(note => {
+            const seenIds = new Set();
+            const notes = Array.from(stickyLayer.querySelectorAll('.sticky-note')).reduce((acc, note) => {
                 const textarea = note.querySelector('.sticky-input');
-                return {
-                    id: note.dataset.noteId,
+                const id = note.dataset.noteId;
+                if (!id || seenIds.has(id)) return acc;
+                seenIds.add(id);
+                acc.push({
+                    id,
                     slot: note.dataset.attachedSlot,
                     value: textarea ? textarea.value : ""
-                };
-            });
+                });
+                return acc;
+            }, []);
             localStorage.setItem('stickyNotes', JSON.stringify(notes));
         }
         // Restore notes and reattach per-note input listeners after loading.
         function loadStickyNotes() {
+            // Rebuild from storage to avoid duplicate DOM notes on repeated init paths.
+            stickyLayer.querySelectorAll('.sticky-note').forEach((note) => note.remove());
+            noteSlots.forEach((slot) => delete slot.dataset.noteId);
             const notes = JSON.parse(localStorage.getItem('stickyNotes') || '[]');
+            const seenIds = new Set();
+            let maxId = 0;
             notes.forEach(noteData => {
+                if (!noteData || !noteData.id || seenIds.has(noteData.id)) return;
                 const slot = noteSlots.find(s => s.dataset.slotIndex === noteData.slot && !s.dataset.noteId);
                 if (!slot) return;
+                seenIds.add(noteData.id);
+                const idMatch = String(noteData.id || '').match(/^sticky-(\d+)$/);
+                if (idMatch) maxId = Math.max(maxId, Number(idMatch[1]));
                 const note = document.createElement('article');
                 note.className = 'sticky-note color-yellow';
                 note.dataset.noteId = noteData.id;
@@ -219,8 +233,22 @@
                 if (textarea) textarea.value = noteData.value;
                 note.querySelector('.sticky-input').addEventListener('input', saveStickyNotes);
             });
+            stickyCounter = Math.max(stickyCounter, maxId);
         }
-        window.addEventListener('DOMContentLoaded', loadStickyNotes);
+        let stickyNotesInitialized = false;
+        let stickyNotesReady = false;
+        function initializeStickyNotes() {
+            if (stickyNotesInitialized) return;
+            stickyNotesInitialized = true;
+            stickyLayer.style.visibility = "hidden";
+            loadStickyNotes();
+            requestAnimationFrame(() => {
+                refreshAttachedNotes();
+                stickyLayer.style.visibility = "visible";
+                stickyNotesReady = true;
+            });
+        }
+        window.addEventListener('load', initializeStickyNotes);
 
         // --- Sticky Note Logic ---
         // Slot helpers keep note placement deterministic and easy to snap back.
@@ -253,15 +281,11 @@
         }
         function positionNoteOnSlot(note, slot) {
             const slotRect = getSlotRect(slot);
-            const layerRect = getLayerRect();
-            // Calculate position relative to the sticky notes space, not the whole page
-            let x = slotRect.left - layerRect.left;
-            let y = slotRect.top - layerRect.top;
-            // Clamp Y to ensure the sticky note stays inside the container (no overhang)
-            y = Math.max(0, Math.min(y, layerRect.height - note.offsetHeight));
-            x = Math.max(0, Math.min(x, layerRect.width - note.offsetWidth));
-            note.style.left = `${x}px`;
-            note.style.top = `${y}px`;
+            // Match the slot rectangle exactly in viewport coordinates.
+            note.style.left = `${slotRect.left}px`;
+            note.style.top = `${slotRect.top}px`;
+            note.style.width = `${slotRect.width}px`;
+            note.style.height = `${slotRect.height}px`;
         }
         function releaseSlotForNote(note) {
             const attachedSlotIndex = note.dataset.attachedSlot;
@@ -312,14 +336,14 @@
             note.setPointerCapture(event.pointerId);
             releaseSlotForNote(note);
             note.classList.add("dragging");
+            canvas.style.pointerEvents = "none";
             event.preventDefault();
         }
         // Track pointer movement in sticky-layer coordinates.
         function onStickyPointerMove(event) {
             if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
-            const layerRect = getLayerRect();
-            const x = event.clientX - layerRect.left - activeDrag.offsetX;
-            const y = event.clientY - layerRect.top - activeDrag.offsetY;
+            const x = event.clientX - activeDrag.offsetX;
+            const y = event.clientY - activeDrag.offsetY;
             activeDrag.note.style.left = `${x}px`;
             activeDrag.note.style.top = `${y}px`;
         }
@@ -328,16 +352,28 @@
             if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
             const note = activeDrag.note;
             note.classList.remove("dragging");
+            canvas.style.pointerEvents = "";
             maybeSnapToNearestSlot(note);
             note.releasePointerCapture(event.pointerId);
             activeDrag = null;
         }
         function removeStickyNote(note) {
             if (!note) return;
-            if (activeDrag && activeDrag.note === note) activeDrag = null;
-            releaseSlotForNote(note);
-            note.remove();
+            const noteId = note.dataset.noteId;
+            if (activeDrag && activeDrag.note && activeDrag.note.dataset.noteId === noteId) activeDrag = null;
+            if (noteId) {
+                noteSlots.forEach((slot) => {
+                    if (slot.dataset.noteId === noteId) delete slot.dataset.noteId;
+                });
+                Array.from(stickyLayer.querySelectorAll('.sticky-note')).forEach((item) => {
+                    if (item.dataset.noteId === noteId) item.remove();
+                });
+            } else {
+                releaseSlotForNote(note);
+                note.remove();
+            }
             saveStickyNotes();
+            refreshAttachedNotes();
         }
         function refreshAttachedNotes() {
             for (const slot of noteSlots) {
@@ -347,8 +383,19 @@
                     delete slot.dataset.noteId;
                     continue;
                 }
-                if (note.dataset.attachedSlot === slot.dataset.slotIndex) positionNoteOnSlot(note, slot);
+                if (note.dataset.attachedSlot === slot.dataset.slotIndex && !note.classList.contains("dragging")) {
+                    positionNoteOnSlot(note, slot);
+                }
             }
+        }
+        let attachedRefreshQueued = false;
+        function scheduleAttachedNotesRefresh() {
+            if (!stickyNotesReady || attachedRefreshQueued) return;
+            attachedRefreshQueued = true;
+            requestAnimationFrame(() => {
+                attachedRefreshQueued = false;
+                refreshAttachedNotes();
+            });
         }
 
         // --- Calculator Logic ---
@@ -644,8 +691,9 @@
         stickyLayer.addEventListener("pointercancel", onStickyPointerUp);
         window.addEventListener("resize", () => {
             resizeCanvas();
-            refreshAttachedNotes();
+            scheduleAttachedNotesRefresh();
         });
+        window.addEventListener("scroll", scheduleAttachedNotesRefresh, { passive: true });
         resizeCanvas();
         // Handle all calculator button clicks via event delegation.
         keys.addEventListener("click", (event) => {
