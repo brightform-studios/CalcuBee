@@ -19,7 +19,6 @@ h2.recent-calculations {
     --sticky-size: 182px;
     --shell-gap: clamp(0.35rem, 0.9vw, 0.65rem);
     --footer-gap: clamp(0.5rem, 1vw, 0.8rem);
-    --edge-safe: 12px;
     --header-h: 52px;
     --footer-h: 52px;
 }
@@ -53,53 +52,14 @@ h2.recent-calculations {
 
 body {
     min-height: 100dvh;
-    font-family: Arial, Helvetica, sans-serif;
     color: var(--ink);
     background: #fff6bf;
     display: flex;
     flex-direction: column;
     align-items: center;
+    position: relative;
     overflow-x: hidden;
     overflow-y: hidden;
-}
-
-.halo {
-    display: none;
-    position: fixed;
-    border-radius: 999px;
-    filter: blur(34px);
-    z-index: -1;
-    opacity: 0.55;
-    animation: drift 9s ease-in-out infinite;
-}
-
-.halo.one {
-    width: 220px;
-    height: 220px;
-    top: 10%;
-    left: -30px;
-    background: #ffcd3f;
-}
-
-.halo.two {
-    width: 280px;
-    height: 280px;
-    right: -40px;
-    bottom: 6%;
-    background: #ffe18c;
-    animation-delay: 1.8s;
-}
-
-@keyframes drift {
-
-    0%,
-    100% {
-        transform: translateY(0) scale(1);
-    }
-
-    50% {
-        transform: translateY(-10px) scale(1.05);
-    }
 }
 
 .shell {
@@ -109,14 +69,13 @@ body {
     overflow: hidden;
     padding: var(--shell-gap);
     margin-bottom: 0;
-    height: calc(100dvh - var(--header-h) - var(--footer-h) - var(--footer-gap) - var(--edge-safe));
-    max-height: calc(100dvh - var(--header-h) - var(--footer-h) - var(--footer-gap) - var(--edge-safe));
+    height: calc(100dvh - var(--header-h) - var(--footer-h) - var(--footer-gap));
+    max-height: calc(100dvh - var(--header-h) - var(--footer-h) - var(--footer-gap));
     display: grid;
     grid-template-columns: minmax(0, 280px) minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas: "history center board";
     align-items: stretch;
     gap: 0.5rem;
-    animation: rise 0.45s ease;
 }
 
 .center-column {
@@ -128,22 +87,10 @@ body {
     min-height: 0;
 }
 
-@keyframes rise {
-    from {
-        transform: translateY(16px);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
 .panel {
     background: var(--card);
     backdrop-filter: blur(10px);
-    border: 1px solid var(--line);
+    border: 2px solid var(--line);
     border-radius: 18px;
 }
 
@@ -194,7 +141,7 @@ small,
 }
 
 .display {
-    border: 1px solid var(--line);
+    border: 1.5px solid var(--line);
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.8);
     padding: 0.45rem 0.65rem;
@@ -240,7 +187,7 @@ button {
     font-weight: 600;
     color: var(--ink);
     background: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(29, 27, 22, 0.12);
+    border: 1.5px solid rgba(29, 27, 22, 0.12);
     cursor: pointer;
     transition: transform 0.08s ease, background-color 0.16s ease;
 }
@@ -320,7 +267,7 @@ button:active {
     line-height: 1;
     font-weight: 700;
     background: #ffe287;
-    border: 1px solid rgba(29, 27, 22, 0.2);
+    border: 1.5px solid rgba(29, 27, 22, 0.2);
 }
 
 .notes-slots {
@@ -343,9 +290,19 @@ button:active {
     border-radius: 10px;
 }
 
+.note-slot::before {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 2px solid transparent;
+    border-radius: 16px;
+    opacity: 0;
+}
+
 .sticky-layer {
-    position: fixed;
-    inset: 0;
+    position: absolute;
+    inset: 0 0 auto 0;
     overflow: visible;
     z-index: 2000;
     pointer-events: none;
@@ -356,17 +313,14 @@ button:active {
     width: var(--sticky-size);
     height: var(--sticky-size);
     background: #ffe084;
-    border: 2px dashed rgba(74, 64, 36, 0.24);
-    /* Match .note-slot border */
+    border: 1.5px solid rgba(74, 64, 36, 0.24);
     border-radius: 16px;
-    /* Match .note-slot border-radius */
     display: flex;
     flex-direction: column;
     overflow: hidden;
     touch-action: none;
     pointer-events: auto;
     margin: 0;
-    /* Remove margin for perfect alignment */
     cursor: pointer;
 }
 
@@ -421,7 +375,6 @@ button:active {
     cursor: pointer;
 }
 
-/* Match sticky note font to site */
 .sticky-input {
     flex: 1;
     border: 0;
@@ -473,7 +426,7 @@ button:active {
     width: 34px;
     height: 34px;
     border-radius: 8px;
-    border: 1px solid var(--line);
+    border: 1.5px solid var(--line);
     background: #fff;
     cursor: pointer;
 }
@@ -488,7 +441,7 @@ button:active {
 .tools input[type="range"]::-webkit-slider-runnable-track {
     height: 8px;
     background: #ffffff;
-    border: 1px solid var(--line);
+    border: 1.5px solid var(--line);
     border-radius: 999px;
 }
 
@@ -499,14 +452,14 @@ button:active {
     height: 16px;
     margin-top: -5px;
     border-radius: 999px;
-    border: 1px solid rgba(106, 79, 10, 0.35);
+    border: 1.5px solid rgba(106, 79, 10, 0.35);
     background: var(--accent-strong);
 }
 
 .tools input[type="range"]::-moz-range-track {
     height: 8px;
     background: #ffffff;
-    border: 1px solid var(--line);
+    border: 1.5px solid var(--line);
     border-radius: 999px;
 }
 
@@ -514,7 +467,7 @@ button:active {
     width: 16px;
     height: 16px;
     border-radius: 999px;
-    border: 1px solid rgba(106, 79, 10, 0.35);
+    border: 1.5px solid rgba(106, 79, 10, 0.35);
     background: var(--accent-strong);
 }
 
@@ -522,7 +475,7 @@ button:active {
     min-height: 36px;
     padding: 0.45rem 0.8rem;
     font-size: 0.9rem;
-    border: 1px solid var(--line);
+    border: 1.5px solid var(--line);
     background: rgba(255, 255, 255, 0.9);
 }
 
@@ -533,7 +486,7 @@ button:active {
 
 .board-wrap {
     flex: 1;
-    border: 1px solid var(--line);
+    border: 1.5px solid var(--line);
     border-radius: 14px;
     padding: 0.35rem;
     background: rgba(255, 255, 255, 0.82);
@@ -570,7 +523,7 @@ button:active {
 }
 
 .history-list li {
-    border: 1px solid var(--line);
+    border: 1.5px solid var(--line);
     border-radius: 7px;
     padding: 0.14rem 0.35rem;
     background: rgba(255, 255, 255, 0.75);
@@ -610,12 +563,6 @@ button:active {
         grid-template-areas:
             "center board"
             "history history";
-    }
-
-    .sticky-layer {
-        position: fixed;
-        inset: 0;
-        z-index: 2000;
     }
 
     .history-list {
@@ -666,12 +613,6 @@ button:active {
         align-self: auto;
     }
 
-    .sticky-layer {
-        position: fixed;
-        inset: 0;
-        z-index: 2000;
-    }
-
     .history-list {
         max-height: clamp(170px, 32vh, 240px);
     }
@@ -703,7 +644,6 @@ button:active {
     :root {
         --sticky-size: 142px;
     }
-
 
     .panel,
     .board-wrap {
@@ -787,7 +727,7 @@ button:active {
     }
 
     .shell {
-        max-height: calc(100dvh - var(--header-h) - var(--footer-h) - var(--footer-gap) - var(--edge-safe));
+        max-height: calc(100dvh - var(--header-h) - var(--footer-h) - var(--footer-gap));
     }
 
     .history-list {

@@ -9,15 +9,11 @@
     <title>CalcuBee</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-    <div class="halo one" aria-hidden="true"></div>
-    <div class="halo two" aria-hidden="true"></div>
     <header class="site-header" aria-label="Site header"></header>
     <main class="shell" aria-label="Calculator app">
         <aside class="history-panel panel">
@@ -80,7 +76,7 @@
                         aria-label="Add sticky note">+</button>
                 </div>
                 <p>Tap + to drop a sticky note into an open slot. Drag notes anywhere on the page.</p>
-                <div id="notesSlots" class="notes-slots" aria-label="Sticky note slots">
+                <div class="notes-slots" aria-label="Sticky note slots">
                     <div class="note-slot" data-slot-index="0" aria-hidden="true"></div>
                     <div class="note-slot" data-slot-index="1" aria-hidden="true"></div>
                     <div class="note-slot" data-slot-index="2" aria-hidden="true"></div>
@@ -135,7 +131,12 @@
         const notesSpace = document.querySelector(".notes-space");
         const stickyLayer = document.getElementById("stickyLayer");
         const noteSlots = Array.from(document.querySelectorAll(".note-slot"));
+        const siteFooter = document.querySelector(".site-footer");
         const ctx = canvas.getContext("2d");
+
+        if (stickyLayer.parentElement !== document.body) {
+            document.body.appendChild(stickyLayer);
+        }
 
         // --- Calculator Scope ---
         const scope = {
@@ -160,6 +161,8 @@
                 return {
                     id: note.dataset.noteId,
                     slot: note.dataset.attachedSlot,
+                    x: parseFloat(note.style.left || '0'),
+                    y: parseFloat(note.style.top || '0'),
                     value: textarea ? textarea.value : ""
                 };
             });
@@ -168,13 +171,14 @@
         // Restore notes and reattach per-note input listeners after loading.
         function loadStickyNotes() {
             const notes = JSON.parse(localStorage.getItem('stickyNotes') || '[]');
+            syncStickyLayerBounds();
             notes.forEach(noteData => {
-                const slot = noteSlots.find(s => s.dataset.slotIndex === noteData.slot && !s.dataset.noteId);
-                if (!slot) return;
                 const note = document.createElement('article');
                 note.className = 'sticky-note color-yellow';
                 note.dataset.noteId = noteData.id;
-                note.dataset.attachedSlot = noteData.slot;
+                if (noteData.slot !== undefined && noteData.slot !== "") {
+                    note.dataset.attachedSlot = noteData.slot;
+                }
                 note.style.zIndex = String(20 + stickyCounter);
                 note.innerHTML = `
                     <div class="sticky-drag-zone" aria-hidden="true"></div>
@@ -182,8 +186,26 @@
                     <textarea class="sticky-input" placeholder="Write your note..."></textarea>
                 `;
                 stickyLayer.appendChild(note);
-                slot.dataset.noteId = noteData.id;
-                positionNoteOnSlot(note, slot);
+                const noteNumber = Number.parseInt(String(noteData.id).replace(/^sticky-/, ''), 10);
+                if (Number.isFinite(noteNumber)) stickyCounter = Math.max(stickyCounter, noteNumber);
+
+                const slot = noteSlots.find(s => s.dataset.slotIndex === noteData.slot && !s.dataset.noteId);
+                if (slot) {
+                    slot.dataset.noteId = noteData.id;
+                    positionNoteOnSlot(note, slot);
+                } else if (Number.isFinite(noteData.x) && Number.isFinite(noteData.y)) {
+                    setClampedNotePosition(note, noteData.x, noteData.y);
+                } else {
+                    const fallbackSlot = getOpenSlot();
+                    if (fallbackSlot) {
+                        fallbackSlot.dataset.noteId = noteData.id;
+                        note.dataset.attachedSlot = fallbackSlot.dataset.slotIndex;
+                        positionNoteOnSlot(note, fallbackSlot);
+                    } else {
+                        setClampedNotePosition(note, 8, 8);
+                    }
+                }
+
                 const textarea = note.querySelector('.sticky-input');
                 if (textarea) textarea.value = noteData.value;
                 note.querySelector('.sticky-input').addEventListener('input', saveStickyNotes);
@@ -195,40 +217,33 @@
         // Slot helpers keep note placement deterministic and easy to snap back.
         function getSlotRect(slot) { return slot.getBoundingClientRect(); }
         function getLayerRect() { return stickyLayer.getBoundingClientRect(); }
+        function getLayerPageOffset() {
+            const layerRect = getLayerRect();
+            return {
+                left: layerRect.left + window.scrollX,
+                top: layerRect.top + window.scrollY
+            };
+        }
+        function syncStickyLayerBounds() {
+            const footerBottom = siteFooter
+                ? Math.ceil(siteFooter.getBoundingClientRect().bottom + window.scrollY)
+                : 0;
+            const viewportBottom = Math.ceil(window.scrollY + window.innerHeight);
+            stickyLayer.style.height = `${Math.max(footerBottom, viewportBottom)}px`;
+        }
         function clamp(value, min, max) {
             return Math.max(min, Math.min(value, max));
         }
         function getStickyBounds(note) {
-            const layerRect = getLayerRect();
+            syncStickyLayerBounds();
             const safeGap = 8;
-            const isViewportLayer = getComputedStyle(stickyLayer).position === "fixed";
-            const header = isViewportLayer ? document.querySelector(".site-header") : null;
-            const footer = isViewportLayer ? document.querySelector(".site-footer") : null;
-
-            let minY = safeGap;
-            if (header) {
-                const headerRect = header.getBoundingClientRect();
-                const headerBottom = headerRect.bottom - layerRect.top;
-                if (headerBottom > 0) minY = Math.max(0, headerBottom + safeGap);
-            }
-
-            let maxY = layerRect.height - note.offsetHeight - safeGap;
-            if (footer) {
-                const footerRect = footer.getBoundingClientRect();
-                const footerTop = footerRect.top - layerRect.top;
-                if (footerTop < layerRect.height) {
-                    maxY = Math.min(maxY, footerTop - note.offsetHeight - safeGap);
-                }
-            }
-
-            const maxX = Math.max(safeGap, layerRect.width - note.offsetWidth - safeGap);
-            minY = Math.max(0, minY);
-            maxY = Math.max(minY, maxY);
+            const maxX = Math.max(safeGap, window.innerWidth - note.offsetWidth - safeGap);
+            const maxY = Math.max(safeGap, stickyLayer.offsetHeight - note.offsetHeight - safeGap);
 
             return {
                 minX: safeGap,
                 maxX,
-                minY,
+                minY: safeGap,
                 maxY
             };
         }
@@ -267,10 +282,10 @@
         }
         function positionNoteOnSlot(note, slot) {
             const slotRect = getSlotRect(slot);
-            const layerRect = getLayerRect();
-            // Calculate position relative to the sticky notes space, not the whole page
-            const x = slotRect.left - layerRect.left;
-            const y = slotRect.top - layerRect.top;
+            const layerOffset = getLayerPageOffset();
+            // Calculate position in page coordinates so notes stay attached while scrolling.
+            const x = slotRect.left + window.scrollX - layerOffset.left;
+            const y = slotRect.top + window.scrollY - layerOffset.top;
             setClampedNotePosition(note, x, y);
         }
         function releaseSlotForNote(note) {
@@ -327,9 +342,9 @@
         // Track pointer movement in sticky-layer coordinates.
         function onStickyPointerMove(event) {
             if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
-            const layerRect = getLayerRect();
-            const x = event.clientX - layerRect.left - activeDrag.offsetX;
-            const y = event.clientY - layerRect.top - activeDrag.offsetY;
+            const layerOffset = getLayerPageOffset();
+            const x = event.pageX - layerOffset.left - activeDrag.offsetX;
+            const y = event.pageY - layerOffset.top - activeDrag.offsetY;
             setClampedNotePosition(activeDrag.note, x, y);
         }
         // End drag and attempt a nearest-slot snap.
@@ -340,6 +355,7 @@
             maybeSnapToNearestSlot(note);
             note.releasePointerCapture(event.pointerId);
             activeDrag = null;
+            saveStickyNotes();
         }
         function removeStickyNote(note) {
             if (!note) return;
@@ -581,13 +597,17 @@
         stickyLayer.addEventListener("pointerup", onStickyPointerUp);
         stickyLayer.addEventListener("pointercancel", onStickyPointerUp);
         window.addEventListener("resize", () => {
+            syncStickyLayerBounds();
             resizeCanvas();
             refreshAttachedNotes();
         });
+        window.addEventListener("scroll", syncStickyLayerBounds, { passive: true });
         const slotLayoutObserver = new ResizeObserver(() => {
+            syncStickyLayerBounds();
             refreshAttachedNotes();
         });
         slotLayoutObserver.observe(noteSlots[0]?.parentElement || notesSpace);
+        syncStickyLayerBounds();
         resizeCanvas();
         // Handle all calculator button clicks via event delegation.
         keys.addEventListener("click", (event) => {
