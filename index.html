@@ -11,10 +11,32 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <!-- Firebase SDK (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script>
+        // ⚙️ Firebase configuration for CalcuBee
+        const firebaseConfig = {
+            apiKey: "AIzaSyCa_3ghheMXUu43HCemkDxN5nFKpmRvtoQ",
+            authDomain: "calcubee-6963e.firebaseapp.com",
+            projectId: "calcubee-6963e",
+            storageBucket: "calcubee-6963e.firebasestorage.app",
+            messagingSenderId: "588329643250",
+            appId: "1:588329643250:web:549b92a4577e108d05346b",
+            measurementId: "G-93Q7QVCGQJ"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+    </script>
 </head>
 
 <body>
-    <header class="site-header" aria-label="Site header"></header>
+    <header class="site-header" aria-label="Site header">
+        <img src="profile.png" alt="Profile" class="header-avatar" id="headerAvatar">
+        <button id="authBtn" class="auth-btn" type="button">Sign in</button>
+    </header>
     <main class="shell" aria-label="Calculator app">
         <aside class="history-panel panel">
             <h2 class="recent-calculations">Recent Calculations</h2>
@@ -132,6 +154,8 @@
         const stickyLayer = document.getElementById("stickyLayer");
         const noteSlots = Array.from(document.querySelectorAll(".note-slot"));
         const siteFooter = document.querySelector(".site-footer");
+        const headerAvatar = document.getElementById("headerAvatar");
+        const authBtn = document.getElementById("authBtn");
         const ctx = canvas.getContext("2d");
 
         if (stickyLayer.parentElement !== document.body) {
@@ -152,9 +176,129 @@
         let shapeMode = null; // 'circle' | 'square' | 'triangle' | null
         let lineStart = null;
         let lineSnapshot = null;
+        let currentUser = null;
+        let firestoreUnsubscribe = null;
+        let shouldReloadAfterSignOut = false;
+        const WHITEBOARD_STORAGE_KEY = 'whiteboardImage';
+        const CALC_HISTORY_STORAGE_KEY = 'calcHistory';
 
         // --- Sticky Notes Local Storage ---
-        // Persist only essential note data so notes survive page reloads.
+        function debounce(fn, delay) {
+            let timer;
+            return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
+        }
+
+        function collectStickyNotes() {
+            return Array.from(stickyLayer.querySelectorAll('.sticky-note')).map(note => {
+                const textarea = note.querySelector('.sticky-input');
+                return {
+                    id: note.dataset.noteId,
+                    slot: note.dataset.attachedSlot ?? "",
+                    x: parseFloat(note.style.left || '0'),
+                    y: parseFloat(note.style.top || '0'),
+                    value: textarea ? textarea.value : ""
+                };
+            });
+        }
+
+        function writeStickyNotesToFirestoreNow() {
+            if (!currentUser) return Promise.resolve();
+            return db.collection("users").doc(currentUser.uid)
+                .set({ stickyNotes: collectStickyNotes() }, { merge: true });
+        }
+
+        function collectCalcHistory() {
+            return Array.from(historyList.querySelectorAll("li")).map(li => ({
+                exp: li.querySelector(".item-exp")?.textContent || "",
+                res: li.querySelector(".item-res")?.textContent || ""
+            }));
+        }
+
+        function writeHistoryToFirestoreNow() {
+            if (!currentUser) return Promise.resolve();
+            return db.collection("users").doc(currentUser.uid)
+                .set({ calcHistory: collectCalcHistory() }, { merge: true });
+        }
+
+        function createHistoryItem(expression, result) {
+            const item = document.createElement("li");
+            const exp = document.createElement("span");
+            const res = document.createElement("span");
+            const removeBtn = document.createElement("button");
+            exp.className = "item-exp";
+            res.className = "item-res";
+            removeBtn.className = "history-remove";
+            removeBtn.type = "button";
+            removeBtn.setAttribute("aria-label", "Remove calculation");
+            removeBtn.textContent = "x";
+            exp.textContent = expression || "";
+            res.textContent = result || "";
+            item.appendChild(exp);
+            item.appendChild(res);
+            item.appendChild(removeBtn);
+            return item;
+        }
+
+        function renderCalcHistory(items) {
+            historyList.innerHTML = "";
+            if (!Array.isArray(items)) return;
+            items.forEach(item => {
+                historyList.appendChild(createHistoryItem(item?.exp || "", item?.res || ""));
+            });
+        }
+
+        function loadHistoryFromLocalStorage() {
+            const items = JSON.parse(localStorage.getItem(CALC_HISTORY_STORAGE_KEY) || '[]');
+            renderCalcHistory(items);
+        }
+
+        function getWhiteboardDataUrl() {
+            return canvas.toDataURL('image/png');
+        }
+
+        function drawWhiteboardFromDataUrl(dataUrl) {
+            fillBoardBackground();
+            if (!dataUrl) return;
+            const image = new Image();
+            image.onload = () => {
+                ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            };
+            image.src = dataUrl;
+        }
+
+        function loadWhiteboardFromLocalStorage() {
+            const dataUrl = localStorage.getItem(WHITEBOARD_STORAGE_KEY) || "";
+            drawWhiteboardFromDataUrl(dataUrl);
+        }
+
+        function writeWhiteboardToFirestoreNow() {
+            if (!currentUser) return Promise.resolve();
+            return db.collection("users").doc(currentUser.uid)
+                .set({ whiteboardImage: getWhiteboardDataUrl() }, { merge: true });
+        }
+
+        const saveWhiteboardToFirestore = debounce(() => {
+            if (!currentUser) return;
+            writeWhiteboardToFirestoreNow().catch(err => console.error("Firestore write failed:", err));
+        }, 800);
+
+        function saveWhiteboard() {
+            const dataUrl = getWhiteboardDataUrl();
+            localStorage.setItem(WHITEBOARD_STORAGE_KEY, dataUrl);
+            saveWhiteboardToFirestore();
+        }
+
+        const saveNotesToFirestore = debounce(() => {
+            if (!currentUser) return;
+            writeStickyNotesToFirestoreNow().catch(err => console.error("Firestore write failed:", err));
+        }, 800);
+        function saveHistoryToFirestore() {
+            const items = collectCalcHistory();
+            localStorage.setItem(CALC_HISTORY_STORAGE_KEY, JSON.stringify(items));
+            if (!currentUser) return;
+            writeHistoryToFirestoreNow().catch(err => console.error("Firestore write failed:", err));
+        }
+        // Persist note data so notes survive page reloads.
         function saveStickyNotes() {
             const notes = Array.from(stickyLayer.querySelectorAll('.sticky-note')).map(note => {
                 const textarea = note.querySelector('.sticky-input');
@@ -167,6 +311,7 @@
                 };
             });
             localStorage.setItem('stickyNotes', JSON.stringify(notes));
+            saveNotesToFirestore();
         }
         // Restore notes and reattach per-note input listeners after loading.
         function loadStickyNotes() {
@@ -383,6 +528,92 @@
             }
         }
 
+        // --- Firebase Auth & Firestore Sync ---
+        function loadFromFirestore(uid) {
+            if (firestoreUnsubscribe) firestoreUnsubscribe();
+            firestoreUnsubscribe = db.collection("users").doc(uid).onSnapshot(doc => {
+                if (!doc.exists) {
+                    stickyLayer.querySelectorAll('.sticky-note').forEach(n => n.remove());
+                    noteSlots.forEach(s => delete s.dataset.noteId);
+                    stickyCounter = 0;
+                    loadStickyNotes();
+                    loadHistoryFromLocalStorage();
+                    loadWhiteboardFromLocalStorage();
+                    return;
+                }
+                const data = doc.data();
+                if (Array.isArray(data.stickyNotes)) {
+                    stickyLayer.querySelectorAll('.sticky-note').forEach(n => n.remove());
+                    noteSlots.forEach(s => delete s.dataset.noteId);
+                    stickyCounter = 0;
+                    localStorage.setItem('stickyNotes', JSON.stringify(data.stickyNotes));
+                    loadStickyNotes();
+                }
+                if (Array.isArray(data.calcHistory)) {
+                    localStorage.setItem(CALC_HISTORY_STORAGE_KEY, JSON.stringify(data.calcHistory));
+                    renderCalcHistory(data.calcHistory);
+                }
+                if (typeof data.whiteboardImage === "string") {
+                    localStorage.setItem(WHITEBOARD_STORAGE_KEY, data.whiteboardImage);
+                    drawWhiteboardFromDataUrl(data.whiteboardImage);
+                }
+            }, err => console.error("Firestore listener error:", err));
+        }
+        auth.onAuthStateChanged(user => {
+            currentUser = user;
+            if (user) {
+                headerAvatar.src = "profile.png";
+                headerAvatar.title = user.displayName || "";
+                authBtn.textContent = "Sign out";
+                stickyLayer.querySelectorAll('.sticky-note').forEach(n => n.remove());
+                noteSlots.forEach(s => delete s.dataset.noteId);
+                stickyCounter = 0;
+                loadStickyNotes();
+                loadHistoryFromLocalStorage();
+                loadWhiteboardFromLocalStorage();
+                loadFromFirestore(user.uid);
+            } else {
+                headerAvatar.src = "profile.png";
+                headerAvatar.title = "";
+                authBtn.textContent = "Sign in";
+                if (firestoreUnsubscribe) { firestoreUnsubscribe(); firestoreUnsubscribe = null; }
+                stickyLayer.querySelectorAll('.sticky-note').forEach(n => n.remove());
+                noteSlots.forEach(s => delete s.dataset.noteId);
+                stickyCounter = 0;
+                historyList.innerHTML = "";
+                fillBoardBackground();
+                if (shouldReloadAfterSignOut) {
+                    shouldReloadAfterSignOut = false;
+                    window.location.reload();
+                    return;
+                }
+            }
+        });
+        authBtn.addEventListener("click", () => {
+            if (currentUser) {
+                // Save in background, but do not block sign-out on network writes.
+                writeStickyNotesToFirestoreNow().catch(err => {
+                    console.error("Pre sign-out note save failed:", err);
+                });
+                localStorage.setItem(CALC_HISTORY_STORAGE_KEY, JSON.stringify(collectCalcHistory()));
+                writeHistoryToFirestoreNow().catch(err => {
+                    console.error("Pre sign-out history save failed:", err);
+                });
+                writeWhiteboardToFirestoreNow().catch(err => {
+                    console.error("Pre sign-out whiteboard save failed:", err);
+                });
+
+                shouldReloadAfterSignOut = true;
+                auth.signOut().catch(err => {
+                    shouldReloadAfterSignOut = false;
+                    console.error("Sign-out error:", err);
+                });
+            } else {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                auth.signInWithPopup(provider).catch(err => console.error("Sign-in error:", err));
+            }
+        });
+
         // --- Calculator Logic ---
         // Append raw token text into the expression input.
         function appendValue(value) {
@@ -399,17 +630,10 @@
         }
         // Keep a compact, newest-first history list (up to 12 entries).
         function renderHistory(expression, result) {
-            const item = document.createElement("li");
-            const exp = document.createElement("span");
-            const res = document.createElement("span");
-            exp.className = "item-exp";
-            res.className = "item-res";
-            exp.textContent = expression;
-            res.textContent = result;
-            item.appendChild(exp);
-            item.appendChild(res);
+            const item = createHistoryItem(expression, result);
             historyList.prepend(item);
             if (historyList.children.length > 12) historyList.removeChild(historyList.lastChild);
+            saveHistoryToFirestore();
         }
         // Evaluate with math.js using scope variables/functions (e.g., ans, inv).
         function evaluateExpression() {
@@ -514,6 +738,7 @@
             lineStart = null;
             lineSnapshot = null;
             ctx.closePath();
+            saveWhiteboard();
         }
         function getPoint(event) {
             const rect = canvas.getBoundingClientRect();
@@ -538,7 +763,10 @@
         canvas.addEventListener("pointerup", (event) => stopDrawing(event));
         canvas.addEventListener("pointerleave", (event) => stopDrawing(event));
 
-        clearBoardBtn.addEventListener("click", fillBoardBackground);
+        clearBoardBtn.addEventListener("click", () => {
+            fillBoardBackground();
+            saveWhiteboard();
+        });
         // Ensure only one drawing mode is active at any given time.
         function deactivateAllTools() {
             erasing = false;
@@ -586,6 +814,14 @@
             if (!shapeMode) pencilBtn.classList.add("active");
         });
         addStickyBtn.addEventListener("click", createStickyNote);
+        historyList.addEventListener("click", (event) => {
+            const removeButton = event.target.closest(".history-remove");
+            if (!removeButton) return;
+            const item = removeButton.closest("li");
+            if (!item) return;
+            item.remove();
+            saveHistoryToFirestore();
+        });
         stickyLayer.addEventListener("click", (event) => {
             const removeButton = event.target.closest(".sticky-remove");
             if (!removeButton) return;
@@ -599,6 +835,9 @@
         window.addEventListener("resize", () => {
             syncStickyLayerBounds();
             resizeCanvas();
+            if (currentUser) {
+                loadWhiteboardFromLocalStorage();
+            }
             refreshAttachedNotes();
         });
         window.addEventListener("scroll", syncStickyLayerBounds, { passive: true });
@@ -609,6 +848,7 @@
         slotLayoutObserver.observe(noteSlots[0]?.parentElement || notesSpace);
         syncStickyLayerBounds();
         resizeCanvas();
+        fillBoardBackground();
         // Handle all calculator button clicks via event delegation.
         keys.addEventListener("click", (event) => {
             const target = event.target;
