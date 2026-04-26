@@ -37,7 +37,7 @@ h2.recent-calculations {
     flex-shrink: 0;
     background: var(--accent);
     border-bottom: 2px solid var(--accent-strong);
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--header-gap);
     display: flex;
     align-items: center;
     padding: 0 0.75rem;
@@ -149,7 +149,7 @@ h6 {
 }
 
 h1 {
-    font-size: clamp(1.5rem, 3vw, 1.8rem);
+    font-size: 1.5rem;
     letter-spacing: 0.4px;
 }
 
@@ -269,7 +269,6 @@ button:active {
     min-height: 120px;
     display: grid;
     align-content: start;
-    gap: 0.35rem;
     padding: 0.55rem;
     padding-bottom: 0.75rem;
     overflow: visible;
@@ -278,6 +277,7 @@ button:active {
 
 .notes-space h2 {
     font-size: 1.5rem;
+    margin-top: -0.5rem;
 }
 
 .notes-head {
@@ -307,7 +307,7 @@ button:active {
     align-content: flex-start;
     gap: 0.4rem;
     width: min(calc(var(--sticky-size) * 3 + 0.8rem), 100%);
-    margin: 0.35rem auto 0;
+    margin: 0.5rem auto 0.8rem;
     z-index: 1;
     pointer-events: none;
 }
@@ -418,8 +418,8 @@ button:active {
 .notes-space p {
     color: var(--muted);
     font-size: 0.9rem;
-    max-width: 52ch;
-    margin-bottom: 0.3rem;
+    max-width: 65ch;
+    margin-top: -0.3rem;
 }
 
 .board h2 {
@@ -555,7 +555,7 @@ button:active {
     position: relative;
     border: 1.5px solid var(--line);
     border-radius: 7px;
-    padding: 0.14rem 1.4rem 0.14rem 0.35rem;
+    padding: 0.20rem 1.4rem 0.14rem 0.35rem;
     background: rgba(255, 255, 255, 0.75);
 }
 
@@ -571,14 +571,14 @@ button:active {
     border-radius: 999px;
     border: 0;
     background: transparent;
-    color: var(--muted);
+    color: var(--ink);
     font-size: 0.85rem;
     line-height: 1;
     transition: none;
 }
 
 .history-remove:hover {
-    color: var(--muted);
+    color: var(--ink);
     transform: translateY(-50%);
 }
 
@@ -750,7 +750,7 @@ button:active {
 @media (max-height: 860px) {
     :root {
         --shell-gap: clamp(0.25rem, 0.6vw, 0.45rem);
-        --footer-gap: clamp(0.35rem, 0.7vw, 0.55rem);
+        --footer-gap: clamp(0.35rem, 0.7vw, 0.45rem);
         --sticky-size: 164px;
     }
 

@@ -404,13 +404,21 @@
         function getStickyBounds(note) {
             syncStickyLayerBounds();
             const safeGap = 8;
+            const siteHeader = document.querySelector('.site-header');
+            const headerBottom = siteHeader
+                ? Math.ceil(siteHeader.getBoundingClientRect().bottom + window.scrollY)
+                : 0;
+            const footerTop = siteFooter
+                ? Math.floor(siteFooter.getBoundingClientRect().top + window.scrollY)
+                : stickyLayer.offsetHeight;
             const maxX = Math.max(safeGap, window.innerWidth - note.offsetWidth - safeGap);
-            const maxY = Math.max(safeGap, stickyLayer.offsetHeight - note.offsetHeight - safeGap);
+            const minY = headerBottom + safeGap;
+            const maxY = Math.max(minY, footerTop - note.offsetHeight - safeGap);
 
             return {
                 minX: safeGap,
                 maxX,
-                minY: safeGap,
+                minY,
                 maxY
             };
         }
