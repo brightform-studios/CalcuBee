@@ -21,6 +21,7 @@ h2.recent-calculations {
     --footer-gap: clamp(0.5rem, 1vw, 0.8rem);
     --header-h: 52px;
     --footer-h: 52px;
+    --header-gap: clamp(0.25rem, 0.6vw, 0.4rem);
 }
 
 * {
@@ -47,7 +48,7 @@ h2.recent-calculations {
     height: calc(var(--header-h) - 13px);
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid #333333;
+    border: 2px solid var(--ink);
     flex-shrink: 0;
     margin-top: 0.1rem;
 }
@@ -97,8 +98,8 @@ body {
     overflow: hidden;
     padding: var(--shell-gap);
     margin-bottom: 0;
-    height: calc(100dvh - var(--header-h) - var(--footer-h) - var(--footer-gap));
-    max-height: calc(100dvh - var(--header-h) - var(--footer-h) - var(--footer-gap));
+    height: calc(100dvh - var(--header-h) - var(--header-gap) - var(--footer-h) - var(--footer-gap));
+    max-height: calc(100dvh - var(--header-h) - var(--header-gap) - var(--footer-h) - var(--footer-gap));
     display: grid;
     grid-template-columns: minmax(0, 280px) minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas: "history center board";
@@ -184,7 +185,7 @@ small,
     border: 0;
     background: transparent;
     color: var(--ink);
-    font-size: clamp(1rem, 2.6vw, 1.1rem);
+    font-size: clamp(1rem, 2.6vw, 0.9rem);
     font-family: inherit;
     outline: none;
 }
@@ -380,7 +381,7 @@ button:active {
     height: 1.2rem;
     border: 0;
     background: transparent;
-    color: #6a4b09;
+    color: var(--ink);
     font-size: 1rem;
     font-weight: 700;
     line-height: 1;
@@ -409,7 +410,7 @@ button:active {
     resize: none;
     padding: 2.3rem 0.68rem 0.68rem;
     font: 600 0.9rem/1.4 Arial, Helvetica, sans-serif;
-    color: #000000;
+    color: var(--ink);
     background: transparent;
     outline: none;
 }
