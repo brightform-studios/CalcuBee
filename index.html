@@ -37,6 +37,25 @@
         <img src="profile.png" alt="Profile" class="header-avatar" id="headerAvatar">
         <button id="authBtn" class="auth-btn" type="button">Sign in</button>
     </header>
+    <div id="authModal" class="auth-modal" aria-hidden="true" role="dialog" aria-modal="true"
+        aria-labelledby="authModalTitle">
+        <div class="auth-backdrop" data-close-auth-modal="true"></div>
+        <section class="auth-card panel" role="document">
+            <button id="closeAuthModalBtn" class="auth-close" type="button" aria-label="Close login popup">x</button>
+            <h2 id="authModalTitle">Welcome to CalcuBee</h2>
+            <p class="auth-subtitle">Sign in to sync your history, notes, and whiteboard.</p>
+            <form id="authForm" class="auth-form" novalidate>
+                <label for="authEmail">Email</label>
+                <input id="authEmail" name="email" type="email" autocomplete="email" required>
+                <label for="authPassword">Password</label>
+                <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="6"
+                    required>
+                <button id="authSubmitBtn" class="auth-submit" type="submit">Sign In</button>
+            </form>
+            <button id="authGoogleBtn" class="auth-google" type="button">Continue with Google</button>
+            <button id="authSwitchModeBtn" class="auth-switch" type="button">Need an account? Create one</button>
+        </section>
+    </div>
     <main class="shell" aria-label="Calculator app">
         <aside class="history-panel panel">
             <h2 class="recent-calculations">Recent Calculations</h2>
@@ -176,6 +195,15 @@
         const siteFooter = document.querySelector(".site-footer");
         const headerAvatar = document.getElementById("headerAvatar");
         const authBtn = document.getElementById("authBtn");
+        const authModal = document.getElementById("authModal");
+        const closeAuthModalBtn = document.getElementById("closeAuthModalBtn");
+        const authForm = document.getElementById("authForm");
+        const authEmailInput = document.getElementById("authEmail");
+        const authPasswordInput = document.getElementById("authPassword");
+        const authSubmitBtn = document.getElementById("authSubmitBtn");
+        const authGoogleBtn = document.getElementById("authGoogleBtn");
+        const authSwitchModeBtn = document.getElementById("authSwitchModeBtn");
+        const authModalTitle = document.getElementById("authModalTitle");
         const ctx = canvas.getContext("2d");
 
         if (stickyLayer.parentElement !== document.body) {
@@ -201,8 +229,31 @@
         let currentUser = null;
         let firestoreUnsubscribe = null;
         let shouldReloadAfterSignOut = false;
+        let authMode = "signin";
         const WHITEBOARD_STORAGE_KEY = 'whiteboardImage';
         const CALC_HISTORY_STORAGE_KEY = 'calcHistory';
+
+        function updateAuthModeUI() {
+            const isSignIn = authMode === "signin";
+            authModalTitle.textContent = isSignIn ? "Welcome to CalcuBee" : "Create your account";
+            authSubmitBtn.textContent = isSignIn ? "Sign In" : "Create Account";
+            authSwitchModeBtn.textContent = isSignIn
+                ? "Need an account? Create one"
+                : "Already have an account? Sign in";
+            authPasswordInput.autocomplete = isSignIn ? "current-password" : "new-password";
+        }
+
+        function openAuthModal() {
+            authModal.classList.add("open");
+            authModal.setAttribute("aria-hidden", "false");
+            authEmailInput.focus();
+        }
+
+        function closeAuthModal() {
+            authModal.classList.remove("open");
+            authModal.setAttribute("aria-hidden", "true");
+            authPasswordInput.value = "";
+        }
 
         // --- Sticky Notes Local Storage ---
         function debounce(fn, delay) {
@@ -595,6 +646,7 @@
                 headerAvatar.src = "profile.png";
                 headerAvatar.title = user.displayName || "";
                 authBtn.textContent = "Sign Out";
+                closeAuthModal();
                 stickyLayer.querySelectorAll('.sticky-note').forEach(n => n.remove());
                 noteSlots.forEach(s => delete s.dataset.noteId);
                 stickyCounter = 0;
@@ -639,10 +691,55 @@
                     console.error("Sign-out error:", err);
                 });
             } else {
-                const provider = new firebase.auth.GoogleAuthProvider();
-                auth.signInWithPopup(provider).catch(err => console.error("Sign-in error:", err));
+                openAuthModal();
             }
         });
+
+        closeAuthModalBtn.addEventListener("click", closeAuthModal);
+        authModal.addEventListener("click", (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) return;
+            if (target.dataset.closeAuthModal === "true") closeAuthModal();
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && authModal.classList.contains("open")) {
+                closeAuthModal();
+            }
+        });
+
+        authSwitchModeBtn.addEventListener("click", () => {
+            authMode = authMode === "signin" ? "signup" : "signin";
+            updateAuthModeUI();
+        });
+
+        authForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const email = authEmailInput.value.trim();
+            const password = authPasswordInput.value;
+            if (!email || !password) {
+                return;
+            }
+            try {
+                if (authMode === "signin") {
+                    await auth.signInWithEmailAndPassword(email, password);
+                } else {
+                    await auth.createUserWithEmailAndPassword(email, password);
+                }
+            } catch (error) {
+                console.error("Authentication failed:", error);
+            }
+        });
+
+        authGoogleBtn.addEventListener("click", async () => {
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                await auth.signInWithPopup(provider);
+            } catch (error) {
+                console.error("Google sign-in failed:", error);
+            }
+        });
+
+        updateAuthModeUI();
 
         // --- Calculator Logic ---
         // Append raw token text into the expression input.
