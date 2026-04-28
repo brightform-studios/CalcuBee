@@ -184,6 +184,20 @@ h2.recent-calculations {
     border-top: 2px solid var(--accent-strong);
     position: relative;
     z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 0.9rem;
+}
+
+.footer-left-text {
+    color: var(--ink);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.footer-copyright-symbol {
+    font-weight: 900;
 }
 
 body {
