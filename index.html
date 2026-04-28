@@ -15,21 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script>
-        // ⚙️ Firebase configuration for CalcuBee
-        const firebaseConfig = {
-            apiKey: "AIzaSyCa_3ghheMXUu43HCemkDxN5nFKpmRvtoQ",
-            authDomain: "calcubee-6963e.firebaseapp.com",
-            projectId: "calcubee-6963e",
-            storageBucket: "calcubee-6963e.firebasestorage.app",
-            messagingSenderId: "588329643250",
-            appId: "1:588329643250:web:549b92a4577e108d05346b",
-            measurementId: "G-93Q7QVCGQJ"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-    </script>
+    <script src="firebase-config.js"></script>
 </head>
 
 <body>
@@ -230,6 +216,7 @@
         let firestoreUnsubscribe = null;
         let shouldReloadAfterSignOut = false;
         let authMode = "signin";
+        const STICKY_NOTES_STORAGE_KEY = "stickyNotes";
         const WHITEBOARD_STORAGE_KEY = 'whiteboardImage';
         const CALC_HISTORY_STORAGE_KEY = 'calcHistory';
 
@@ -259,6 +246,20 @@
         function debounce(fn, delay) {
             let timer;
             return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
+        }
+
+        function readStoredJson(key, fallback) {
+            try {
+                const raw = localStorage.getItem(key);
+                return raw ? JSON.parse(raw) : fallback;
+            } catch (error) {
+                console.error(`Failed to read localStorage key: ${key}`, error);
+                return fallback;
+            }
+        }
+
+        function logAuthError(context, error) {
+            console.error(`${context}:`, error);
         }
 
         function collectStickyNotes() {
@@ -321,7 +322,7 @@
         }
 
         function loadHistoryFromLocalStorage() {
-            const items = JSON.parse(localStorage.getItem(CALC_HISTORY_STORAGE_KEY) || '[]');
+            const items = readStoredJson(CALC_HISTORY_STORAGE_KEY, []);
             renderCalcHistory(items);
         }
 
@@ -373,22 +374,13 @@
         }
         // Persist note data so notes survive page reloads.
         function saveStickyNotes() {
-            const notes = Array.from(stickyLayer.querySelectorAll('.sticky-note')).map(note => {
-                const textarea = note.querySelector('.sticky-input');
-                return {
-                    id: note.dataset.noteId,
-                    slot: note.dataset.attachedSlot,
-                    x: parseFloat(note.style.left || '0'),
-                    y: parseFloat(note.style.top || '0'),
-                    value: textarea ? textarea.value : ""
-                };
-            });
-            localStorage.setItem('stickyNotes', JSON.stringify(notes));
+            const notes = collectStickyNotes();
+            localStorage.setItem(STICKY_NOTES_STORAGE_KEY, JSON.stringify(notes));
             saveNotesToFirestore();
         }
         // Restore notes and reattach per-note input listeners after loading.
         function loadStickyNotes() {
-            const notes = JSON.parse(localStorage.getItem('stickyNotes') || '[]');
+            const notes = readStoredJson(STICKY_NOTES_STORAGE_KEY, []);
             syncStickyLayerBounds();
             notes.forEach(noteData => {
                 const note = document.createElement('article');
@@ -425,8 +417,10 @@
                 }
 
                 const textarea = note.querySelector('.sticky-input');
-                if (textarea) textarea.value = noteData.value;
-                note.querySelector('.sticky-input').addEventListener('input', saveStickyNotes);
+                if (textarea) {
+                    textarea.value = noteData.value;
+                    textarea.addEventListener('input', saveStickyNotes);
+                }
             });
         }
         window.addEventListener('DOMContentLoaded', loadStickyNotes);
@@ -627,7 +621,7 @@
                     stickyLayer.querySelectorAll('.sticky-note').forEach(n => n.remove());
                     noteSlots.forEach(s => delete s.dataset.noteId);
                     stickyCounter = 0;
-                    localStorage.setItem('stickyNotes', JSON.stringify(data.stickyNotes));
+                    localStorage.setItem(STICKY_NOTES_STORAGE_KEY, JSON.stringify(data.stickyNotes));
                     loadStickyNotes();
                 }
                 if (Array.isArray(data.calcHistory)) {
@@ -688,7 +682,7 @@
                 shouldReloadAfterSignOut = true;
                 auth.signOut().catch(err => {
                     shouldReloadAfterSignOut = false;
-                    console.error("Sign-out error:", err);
+                    logAuthError("Sign-out error", err);
                 });
             } else {
                 openAuthModal();
@@ -726,7 +720,7 @@
                     await auth.createUserWithEmailAndPassword(email, password);
                 }
             } catch (error) {
-                console.error("Authentication failed:", error);
+                logAuthError("Authentication failed", error);
             }
         });
 
@@ -735,7 +729,7 @@
                 const provider = new firebase.auth.GoogleAuthProvider();
                 await auth.signInWithPopup(provider);
             } catch (error) {
-                console.error("Google sign-in failed:", error);
+                logAuthError("Google sign-in failed", error);
             }
         });
 
@@ -757,7 +751,6 @@
         }
         function insertNegation() {
             const current = expressionInput.value;
-            const lastChar = current.slice(-1);
             const canStartNegative = !current || /[+\-*/^(,]$/.test(current);
 
             expressionInput.value += canStartNegative ? "-" : "*(-1)";
@@ -990,7 +983,6 @@
         slotLayoutObserver.observe(noteSlots[0]?.parentElement || notesSpace);
         syncStickyLayerBounds();
         resizeCanvas();
-        fillBoardBackground();
         // Handle all calculator button clicks via event delegation.
         keys.addEventListener("click", (event) => {
             const target = event.target;
