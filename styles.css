@@ -239,6 +239,8 @@ body {
 
 .panel {
     background: var(--card);
+    -webkit-backdrop-filter: blur(10px);
+    /* Safari/iOS support */
     backdrop-filter: blur(10px);
     border: 2px solid var(--line);
     border-radius: 18px;
@@ -583,8 +585,8 @@ button:active {
 
 .tools input[type="range"] {
     width: 100px;
-    appearance: none;
     -webkit-appearance: none;
+    appearance: none;
     background: transparent;
 }
 
